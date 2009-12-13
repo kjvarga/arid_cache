@@ -14,10 +14,14 @@ class AridCacheTest < ActiveSupport::TestCase
   end 
     
   test "should not clobber method_missing" do
+    assert_respond_to User.first, :name
+  end 
+
+  test "should allow access to valid methods" do
     assert_nothing_raised { User.first.is_high? }
     assert User.first.is_high?
   end 
-  
+    
   test "should allow me to cache on the model" do
     assert_nothing_raised do
       define_model_cache(User)

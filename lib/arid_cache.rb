@@ -1,5 +1,4 @@
 require 'arid_cache/helpers'
-require 'arid_cache/cache_hash'
 require 'will_paginate'
 
 module AridCache
@@ -18,7 +17,7 @@ module AridCache
           base_cache_key = AridCache::Helpers.construct_key(scope, $1).to_sym
           if !store.include?(base_cache_key)
             raise ArgumentError.new("Attempting to create an ARID cache dynamically, but #{scope} doens't respond to #{$1}") unless scope.respond_to?($1)
-            proc = store[cache_key] = Proc.new { |ids| scope.send(key).count }
+            proc = store[cache_key] = Proc.new { |ids| scope.send($1).count }
           else
             proc = store[base_cache_key]
             return AridCache::Helpers.access_cache(scope, base_cache_key, proc, opts, count=true)
@@ -61,7 +60,7 @@ module AridCache
       if method.to_s =~ /^cached_(.*)$/
         arid_cache($1, *args)
       else
-        replaced_method_missing(method, *args)
+        super #replaced_method_missing(method, *args)
       end
     end      
   end
