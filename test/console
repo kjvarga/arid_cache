@@ -1,0 +1,8 @@
+#!/usr/bin/env ruby
+irb = RUBY_PLATFORM =~ /(:?mswin|mingw)/ ? 'irb.bat' : 'irb'
+libs = []
+
+libs << 'irb/completion'
+libs << 'test_helper'
+
+exec "#{irb} -Ilib:test#{libs.map{ |l| " -r #{l}" }.join} --simple-prompt"

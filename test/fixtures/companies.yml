@@ -1,0 +1,5 @@
+<% for digit in 1..5 %>
+acme_<%= digit %>:
+  name: Acme <%= digit %>
+  owner_id: 1
+<% end %>

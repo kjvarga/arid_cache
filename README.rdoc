@@ -1,0 +1,10 @@
+== ARID Cache
+
+ARID Cache is a DRY ActiveRecord ID cache.
+
+
+== Example
+
+
+
+Copyright (c) 2009 Karl Varga, released under the MIT license
