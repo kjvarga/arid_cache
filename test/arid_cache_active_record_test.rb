@@ -4,6 +4,7 @@ require 'will_paginate'
 class AridCacheActiveRecordTest < ActiveRecordTestCase
   
   def setup
+    Rails.cache.clear
     @user = User.first
   end
   
