@@ -10,11 +10,8 @@ class AridCacheTest < ActiveSupport::TestCase
     assert_respond_to(User, :cache_store)
     assert_respond_to(User.first, :cache_store)
     assert_instance_of AridCache::Store, User.cache_store
+    assert_same User.cache_store, User.first.cache_store
   end
-  
-  test "should define methods on the instance" do
-    
-  end  
     
   test "should not clobber method_missing" do
     assert_respond_to User.first, :name                                                                  
@@ -29,14 +26,14 @@ class AridCacheTest < ActiveSupport::TestCase
     assert_nothing_raised do
       define_model_cache(User)
     end
-    assert_instance_of(Proc, User.cache_store[:'user-companies'])
+    assert_instance_of(Proc, User.cache_store.get(:'user-companies').proc)
   end
 
   test "should allow me to cache on the instance" do
     assert_nothing_raised do
       define_instance_cache(@user)
     end
-    assert_instance_of(Proc, @user.cache_store[:"#{@user.cache_key}-companies"])
+    assert_instance_of(Proc, @user.cache_store.get(:"#{@user.cache_key}-companies").proc)
   end
     
   test "should raise an error on invalid dynamic caches" do
@@ -47,7 +44,7 @@ class AridCacheTest < ActiveSupport::TestCase
 
   test "should create dynamic caches given valid arguments" do
     assert_nothing_raised { @user.cached_companies }
-    assert_instance_of(Proc, @user.cache_store[:"#{@user.cache_key}-companies"])
+    assert_instance_of(Proc, @user.cache_store.get(:"#{@user.cache_key}-companies").proc)
   end
 
   test "counts queries correctly" do
