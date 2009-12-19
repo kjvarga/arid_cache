@@ -5,9 +5,9 @@ module AridCache
     def query(key, opts, object, &block)
       if block_given? # store a proc
         store(object, key, Proc.new)
-      elsif has?(object, key) # use the proc we have
-        AridCache.cache.fetch(find_or_create(object, key))
-      elsif key =~ /(.*)_count$/ # dynamic count
+      elsif has?(object, key) && key !=~ /(.*)_count$/
+        AridCache.cache.fetch(find_or_create(object, key), opts)
+      else # dynamic count
         if object.respond_to?(key)
           AridCache.cache.fetch_count(find_or_create(object, key))            
         elsif object.respond_to?($1)
@@ -15,8 +15,6 @@ module AridCache
         else
           raise AridCache::Error.new("#{object} doesn't respond to #{key} or #{$1}!  Cannot dynamically create query to get the count.")
         end
-      else # dynamic find
-        AridCache.cache.fetch(find_or_create(object, key), opts)
       end
     end
     
