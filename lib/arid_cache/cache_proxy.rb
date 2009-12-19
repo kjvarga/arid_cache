@@ -2,6 +2,7 @@
 module AridCache
   class CacheProxy
     Struct.new('Result', :ids, :klass, :count, :opts) do
+      
       def has_count?
         !count.nil?
       end

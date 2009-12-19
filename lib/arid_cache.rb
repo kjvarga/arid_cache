@@ -6,7 +6,7 @@ require 'will_paginate'
 module AridCache
   class Error < StandardError; end
   
-  def cache
+  def self.cache
     AridCache::CacheProxy.instance
   end
   

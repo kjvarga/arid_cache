@@ -25,6 +25,8 @@ module AridCache
           method_missing_without_arid_cache(method, *args)
         end
       end 
+      alias_method :method_missing_without_arid_cache, :method_missing
+      alias_method :method_missing, :method_missing_with_arid_cache
     end
           
     def self.included(base)
@@ -32,7 +34,6 @@ module AridCache
       base.send :include, MirrorMethods
       base.class_eval do
         @@cache_store = AridCache::Store.new
-        alias_method_chain :method_missing, :arid_cache
       end
     end
   end
