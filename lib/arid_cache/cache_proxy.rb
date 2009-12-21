@@ -21,7 +21,7 @@ module AridCache
     def clear(object=nil)
       key = 'arid-cache-'
       key += (object.is_a?(Class) ? object : object.class).name.downcase unless object.nil?
-      Rails.cache.delete_matched(%r[#{key}])
+      Rails.cache.delete_matched(%r[#{key}.*])
     end
     
     def self.instance
@@ -36,25 +36,29 @@ module AridCache
       cached = Rails.cache.read(blueprint.cache_key)
       if cached.nil?
         execute_count(blueprint)
-      elsif !cached.is_a?(Struct::Result)
+      elsif cached.is_a?(Struct::Result)
+        cached.has_count? ? cached.count : execute_count(blueprint)
+      else
         cached # some base type, return it
-      elsif cached.has_count?
-        cached.count # we have the count cached
       end
     end
     
     def fetch(blueprint, opts)
       cached = Rails.cache.read(blueprint.cache_key)
-      if cached.nil? || !cached.has_ids?
+      if cached.nil?
         execute_find(blueprint, opts)
-      elsif !cached.is_a?(Struct::Result)
-        cached # some base type, return it
-      elsif cached.has_ids?
-        if opts.include?(:page)
-          blueprint.klass.paginate(cached.ids, opts_for_paginate(opts, cached))
+      elsif cached.is_a?(Struct::Result)
+        if cached.has_ids? # paginate and fetch here
+          if opts.include?(:page)
+            blueprint.klass.paginate(cached.ids, opts_for_paginate(opts, cached))
+          else
+            blueprint.klass.find(cached.ids, opts_for_find(opts, cached))
+          end
         else
-          blueprint.klass.find(cached.ids, opts_for_find(opts, cached))
+          execute_find(blueprint, opts)
         end
+      else
+        cached # some base type, return it
       end
     end
 
@@ -68,9 +72,9 @@ module AridCache
         end
                 
         # Update Rails cache and return the records
-        cached = Struct::Result.new(opts.symbolize_keys!)
+        cached = Struct::Result.new(blueprint.opts)
         cached.ids = records.collect(&:id)
-        cached.count = records.count
+        cached.count = records.size
         if records.respond_to?(:proxy_reflection) # association proxy
           cached.klass = records.proxy_reflection.klass
         elsif records.is_a?(Enumerable)
@@ -85,20 +89,28 @@ module AridCache
       def execute_count(blueprint)
         records = blueprint.proc.call
         
-        if !records.is_a?(Enumerable)
-          return records # some base type, return it
-        end
-        
         # Update Rails cache and return the count
-        cached = Struct::Result.new
-        if records.respond_to?(:proxy_options)
-          cached.count = records.count # named scope, just get the count
+        cached = Struct::Result.new(blueprint.opts)
+
+        # Just get the count if we can.
+        #
+        # Because of how AssociationProxy works, if we even look at it, it'll
+        # trigger the query.  So don't look.
+        #
+        # Association proxy or named scope.  Check for an association first, because
+        # it doesn't trigger the select if it's actually named scope.  Calling respond_to?
+        # on an association proxy will hower trigger a select because it loads up the target
+        # and passes the respond_to? on to it.
+        if records.respond_to?(:proxy_reflection) || records.respond_to?(:proxy_options)
+          cached.count = records.count # just get the count
           cached.klass = blueprint.klass
         elsif records.is_a?(Enumerable)
           cached.ids = records.collect(&:id) # get everything now that we have it
-          cached.count = records.count
+          cached.count = records.size
           cached.klass = records.empty? ? blueprint.klass : records.first.class
-          RAILS_DEFAULT_LOGGER.info("** AridCache: inferring class of collection for cache #{blueprint.cache_key} to be #{cached.klass}")
+          Rails.logger.info("** AridCache: inferring class of collection for cache #{blueprint.cache_key} to be #{cached.klass}")
+        else
+          cached = records # some base type, cache it as itself
         end
         
         Rails.cache.write(blueprint.cache_key, cached)

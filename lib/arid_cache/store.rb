@@ -1,14 +1,16 @@
 module AridCache
   class Store < Hash
-    Struct.new('Item', :cache_key, :proc, :klass)
+    Struct.new('Item', :cache_key, :proc, :klass, :opts)
     
     def query(key, opts, object, &block)
-      return store(object, key, Proc.new) if block_given? # store a proc
+      return store(object, key, Proc.new, opts) if block_given? # store a proc
 
       if has?(object, key)
-        AridCache.cache.fetch(find_or_create(object, key), opts)
+        AridCache.cache.fetch(find(object, key), opts)
       elsif key =~ /(.*)_count$/
-        if object.respond_to?(key)
+        if has?(object, $1)
+          AridCache.cache.fetch_count(find(object, $1))
+        elsif object.respond_to?(key)
           AridCache.cache.fetch_count(find_or_create(object, key))
         elsif object.respond_to?($1)
           AridCache.cache.fetch_count(find_or_create(object, $1))
@@ -25,9 +27,13 @@ module AridCache
     end
     
     # Store a proc
-    def store(object, key, proc)
+    def store(object, key, proc, opts)
       cache_key = object.arid_cache_key(key)
-      self[cache_key] = Struct::Item.new(cache_key, proc, (object.is_a?(Class) ? object : object.class))
+      self[cache_key] = Struct::Item.new(cache_key, proc, (object.is_a?(Class) ? object : object.class), opts.symbolize_keys!)
+    end
+    
+    def find(object, key)
+      self[object.arid_cache_key(key)]
     end
     
     # Find or dynamically create a proc

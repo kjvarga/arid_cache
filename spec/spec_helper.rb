@@ -4,6 +4,9 @@ require 'arid_cache'
 require 'spec'
 require 'spec/autorun'
 
+require 'rubygems'
+require 'will_paginate'
+
 Spec::Runner.configure do |config|
   
 end

@@ -2,26 +2,43 @@ $LOAD_PATH.unshift(File.dirname(__FILE__))
 $LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'lib'))
 
 require 'rubygems'
-require 'rails'
+require 'active_record'
 require 'active_support'
 require 'active_support/test_case'
 require 'test/unit' # required by ActiveSupport::TestCase
-require 'db/prepare'
 require 'will_paginate'
 require 'arid_cache'
 
-# Mock the Rails cache with an in memory-cache
-silence_warnings { Object.const_set "RAILS_CACHE", ActiveSupport::Cache.lookup_store(:memory_store) }
-Rails = Class.new { def self.cache; return RAILS_CACHE; end }
-
+# Setup logging
 log = File.expand_path(File.join(File.dirname(__FILE__), 'log', 'test.log'))
+RAILS_DEFAULT_LOGGER = ENV["STDOUT"] ? Logger.new(STDOUT) : Logger.new(log)
 
-ActiveRecord::Base.logger = ENV["STDOUT"] ? Logger.new(STDOUT) : Logger.new(log)
-ActiveRecord::Base.logger.level = Logger::DEBUG
+# Setup an in memory-cache
+RAILS_CACHE = ActiveSupport::Cache.lookup_store(:memory_store)
+
+# Mock Rails
+Rails = Class.new do
+  cattr_accessor :logger, :cache
+  def self.cache
+    return RAILS_CACHE
+  end
+  def self.logger
+    return RAILS_DEFAULT_LOGGER
+  end
+end
+
+# Set loggers for all frameworks
+for framework in ([ :active_record, :action_controller, :action_mailer ])
+  if Object.const_defined?(framework.to_s.camelize)
+    framework.to_s.camelize.constantize.const_get("Base").logger = Rails.logger
+  end
+end
+ActiveSupport::Dependencies.logger = Rails.logger
+Rails.cache.logger = Rails.logger
+
+# Include this last otherwise the logger isn't set properly
+require 'db/prepare'
+
 ActiveRecord::Base.logger.info("#{"="*25} RUNNING UNIT TESTS #{"="*25}\n\t\t\t#{Time.now.to_s}\n#{"="*70}")
-RAILS_DEFAULT_LOGGER = Logger.new(STDOUT)
-#Rails::Initializer.run do |config|
-#  config.log_level = :debug
-#  config.log_path = log
-#  config.cache_store :memory_store
-#end
+
+

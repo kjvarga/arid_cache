@@ -1,7 +1,6 @@
 require 'arid_cache/store'
 require 'arid_cache/active_record'
 require 'arid_cache/cache_proxy'
-require 'will_paginate'
 
 module AridCache
   class Error < StandardError; end
