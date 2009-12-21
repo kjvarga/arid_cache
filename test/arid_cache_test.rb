@@ -60,8 +60,8 @@ class AridCacheTest < ActiveSupport::TestCase
 
   test "returns valid results" do
     @one = @user.cached_companies
-    assert_equal @one, @user.companies
-    assert @one.size, @user.companies.count
+    assert_equal @user.companies, @one
+    assert_equal @user.companies.count, @one.size
   end
   
   test "paginates results" do
@@ -71,18 +71,28 @@ class AridCacheTest < ActiveSupport::TestCase
     assert_equal 5, results.total_entries    
   end
   
-  test "returns_dynamic_count" do
+  test "returns dynamic count" do
     assert_queries(1) do
       assert_equal 5, @user.cached_companies_count
       assert_equal 5, @user.cached_companies_count
     end
   end
-    
+
+  test "should empty the Rails cache" do
+    @user.cached_companies
+    User.cached_companies
+    assert Rails.cache.exist?(@user.arid_cache_key('companies'))
+    assert Rails.cache.exist?(User.arid_cache_key('companies'))
+    User.clear_cache
+    #assert !Rails.cache.exist?(@user.arid_cache_key('companies'))
+    #assert !Rails.cache.exist?(User.arid_cache_key('companies'))   
+  end
+      
   protected
 
     def get_user
       @user = User.first
-      @user.cache_store.delete!
+      #@user.cache_store.delete!
       @user
     end
     
