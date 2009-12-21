@@ -5,8 +5,8 @@ begin
   require 'jeweler'
   Jeweler::Tasks.new do |gem|
     gem.name = "arid_cache"
-    gem.summary = %Q{Automated, DRY caching of ActiveRecord collections and collection counts.}
-    gem.description = %Q{TODO: longer description of your gem}
+    gem.summary = %Q{Automates efficient caching of your ActiveRecord collections, gives you counts for free and supports pagination.}
+    gem.description = %Q{}
     gem.email = "kjvarga@gmail.com"
     gem.homepage = "http://github.com/kjvarga/arid_cache"
     gem.authors = ["Karl Varga"]

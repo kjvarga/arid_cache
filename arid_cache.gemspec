@@ -10,7 +10,7 @@ Gem::Specification.new do |s|
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Karl Varga"]
   s.date = %q{2009-12-21}
-  s.description = %q{TODO: longer description of your gem}
+  s.description = %q{}
   s.email = %q{kjvarga@gmail.com}
   s.extra_rdoc_files = [
     "LICENSE",
@@ -22,6 +22,7 @@ Gem::Specification.new do |s|
      "README.rdoc",
      "Rakefile",
      "VERSION",
+     "arid_cache.gemspec",
      "lib/arid_cache.rb",
      "lib/arid_cache/active_record.rb",
      "lib/arid_cache/cache_proxy.rb",
@@ -47,7 +48,7 @@ Gem::Specification.new do |s|
   s.rdoc_options = ["--charset=UTF-8"]
   s.require_paths = ["lib"]
   s.rubygems_version = %q{1.3.5}
-  s.summary = %q{Automated, DRY caching of ActiveRecord collections and collection counts.}
+  s.summary = %q{Automates efficient caching of your ActiveRecord collections, gives you counts for free and supports pagination.}
   s.test_files = [
     "spec/arid_cache_spec.rb",
      "spec/spec_helper.rb",
