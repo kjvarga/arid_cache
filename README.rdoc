@@ -4,16 +4,66 @@ ARID Cache is a DRY ActiveRecord ID cache.
 
 == Example
 
+Given the following model:
+
+  class User < ActiveRecord::Base
+    include AridCache
+    has_many    :pets
+    has_one     :preferences
+    named_scope :active, :conditions => [ 'updated_at <= ', 5.minutes.ago ]
+  end
+
+ARID Cache provides these methods:
+ 
+  User.cached_active         # caches the user IDs and the count
+  User.cached_active_count   # gets the count for free
+
+  user = User.first
+  user.cached_pets           # caches the pets IDs and the count
+  user.cached_pets_count     # gets the count for free
+   
+When we call these methods again, instead of doing a full select - usually including
+complex joins or over very large tables which makes this expensive - it just
+selects where the IDs are the cached IDs.
+
+It also gives you paging using WillPaginate.  The IDs from the cache are paginated and
+only that page is selected from the database - again directly from the table, without
+any complex joins or anything.
+
+Some examples of pagination:
+
+  User.cached_active.paginate(:page => 1, :per_page => 30)
+  User.cached_active.paginate(:page => 1)
+  User.cached_active.paginate(:page => 3)
+
+You can also include options for find, such as <tt>:join</tt>, <tt>:include</tt> and <tt>order</tt>...basically any options that find supports.
+
+  User.cached_active.paginate(:page => 1, :include => :preferences)
+  User.cached_active.paginate(:page => 1, :order => 'created_at DESC') # don't change the order, just enforce it
+  
+You can configure your cached blocks in your models:
+  
+  class User < ActiveRecord::Base
+    include AridCache
+    has_many    :pets
+    has_one     :preferences
+    named_scope :active, :conditions => [ 'updated_at <= ', 5.minutes.ago ]
+    
+    self.cached_active_users(:order => 'created_at DESC', :include => :preferences) do
+      self.active
+    end
+  end
+  
 
 == Note on Patches/Pull Requests
- 
+
 * Fork the project.
 * Make your feature addition or bug fix.
 * Add tests for it. This is important so I don't break it in a
   future version unintentionally.
 * Commit, do not mess with rakefile, version, or history.
   (if you want to have your own version, that is fine but
-   bump version in a commit by itself I can ignore when I pull)
+  bump version in a commit by itself I can ignore when I pull)
 * Send me a pull request. Bonus points for topic branches.
 
 == Copyright
