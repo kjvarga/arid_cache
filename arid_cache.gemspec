@@ -17,8 +17,8 @@ Gem::Specification.new do |s|
      "README.rdoc"
   ]
   s.files = [
-    "LICENSE",
-     "MIT-LICENSE",
+    ".gitignore",
+     "LICENSE",
      "README.rdoc",
      "Rakefile",
      "VERSION",
@@ -40,6 +40,7 @@ Gem::Specification.new do |s|
      "test/db/schema.rb",
      "test/fixtures/companies.yml",
      "test/fixtures/users.yml",
+     "test/log/.gitignore",
      "test/models/company.rb",
      "test/models/user.rb",
      "test/test_helper.rb"
