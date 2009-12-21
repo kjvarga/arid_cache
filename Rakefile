@@ -10,7 +10,9 @@ begin
     gem.email = "kjvarga@gmail.com"
     gem.homepage = "http://github.com/kjvarga/arid_cache"
     gem.authors = ["Karl Varga"]
+    gem.add_dependency "will_paginate"
     gem.add_development_dependency "rspec", ">= 1.2.9"
+    gem.add_development_dependency "will_paginate"
     # gem is a Gem::Specification... see http://www.rubygems.org/read/chapter/20 for additional settings
   end
   Jeweler::GemcutterTasks.new

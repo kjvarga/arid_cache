@@ -1,10 +1,14 @@
+$LOAD_PATH.unshift(File.dirname(__FILE__))
+$LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'lib'))
+
 require 'rubygems'
 require 'rails'
 require 'active_support'
 require 'active_support/test_case'
 require 'test/unit' # required by ActiveSupport::TestCase
 require 'db/prepare'
-
+require 'will_paginate'
+require 'arid_cache'
 
 # Mock the Rails cache with an in memory-cache
 silence_warnings { Object.const_set "RAILS_CACHE", ActiveSupport::Cache.lookup_store(:memory_store) }
