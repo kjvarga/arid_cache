@@ -85,12 +85,12 @@ class AridCacheTest < ActiveSupport::TestCase
     assert_equal (@user.companies.count-3)%3, results.size
     assert_equal @user.companies.count, results.total_entries    
   end
-
+  
   test "ignores random parameters" do
     result = @user.cached_companies(:invalid => :params, 'random' => 'values', :user_id => 3)
     assert_equal @user.companies, result
   end
-
+  
   test "passes on options to find" do
     actual = @user.cached_companies(:order => 'users.id DESC')
     expected = @user.companies
@@ -115,7 +115,15 @@ class AridCacheTest < ActiveSupport::TestCase
       assert_equal 5, @user.cached_companies_count
     end
   end
-     
+  
+  test "calling cache_ defines methods on the object" do
+    assert !User.method_defined?(:cached_favorite_companies)
+    @user.cache_favorite_companies(:order => 'name DESC') do
+      @user.companies
+    end
+    assert User.method_defined?(:cached_favorite_companies)
+  end
+       
   # test "should empty the Rails cache" do
   #   @user.cached_companies
   #   User.cached_companies
@@ -147,13 +155,13 @@ class AridCacheTest < ActiveSupport::TestCase
     end
   
     def define_instance_cache(user)
-      user.cached_companies(:per_page => 2) do
+      user.cache_companies(:per_page => 2) do
         user.companies
       end    
     end 
 
     def define_model_cache(model)
-      model.cached_companies(:per_page => 2) do
+      model.cache_companies(:per_page => 2) do
         model.companies
       end    
     end 

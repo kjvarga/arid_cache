@@ -32,7 +32,7 @@ module AridCache
       Rails.cache.exist?(object.arid_cache_key(key))
     end
     
-    def fetch_count(blueprint)
+    def fetch_count(blueprint, opts=nil)
       cached = Rails.cache.read(blueprint.cache_key)
       if cached.nil?
         execute_count(blueprint)

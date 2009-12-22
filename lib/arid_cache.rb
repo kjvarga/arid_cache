@@ -1,11 +1,13 @@
 dir = File.dirname(__FILE__)
 $LOAD_PATH.unshift dir unless $LOAD_PATH.include?(dir)
 
+require 'arid_cache/helpers'
 require 'arid_cache/store'
 require 'arid_cache/active_record'
 require 'arid_cache/cache_proxy'
 
 module AridCache
+  extend AridCache::Helpers
   class Error < StandardError; end
 
   def self.cache
