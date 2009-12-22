@@ -1,7 +1,7 @@
 # AridCache::Cache is a singleton instance
 module AridCache
   class CacheProxy
-    Struct.new('Result', :opts, :ids, :klass, :count) do
+    Result = Struct.new(:opts, :ids, :klass, :count) do
       
       def has_count?
         !count.nil?
@@ -36,7 +36,7 @@ module AridCache
       cached = Rails.cache.read(blueprint.cache_key)
       if cached.nil?
         execute_count(blueprint)
-      elsif cached.is_a?(Struct::Result)
+      elsif cached.is_a?(AridCache::CacheProxy::Result)
         cached.has_count? ? cached.count : execute_count(blueprint)
       else
         cached # some base type, return it
@@ -47,7 +47,7 @@ module AridCache
       cached = Rails.cache.read(blueprint.cache_key)
       if cached.nil?
         execute_find(blueprint, opts)
-      elsif cached.is_a?(Struct::Result)
+      elsif cached.is_a?(AridCache::CacheProxy::Result)
         if cached.has_ids? # paginate and fetch here
           if opts.include?(:page)
             blueprint.klass.paginate(cached.ids, opts_for_paginate(opts, cached))
@@ -72,7 +72,7 @@ module AridCache
         end
                 
         # Update Rails cache and return the records
-        cached = Struct::Result.new(blueprint.opts)
+        cached = AridCache::CacheProxy::Result.new(blueprint.opts)
         cached.ids = records.collect(&:id)
         cached.count = records.size
         if records.respond_to?(:proxy_reflection) # association proxy
@@ -90,7 +90,7 @@ module AridCache
         records = blueprint.proc.call
         
         # Update Rails cache and return the count
-        cached = Struct::Result.new(blueprint.opts)
+        cached = AridCache::CacheProxy::Result.new(blueprint.opts)
 
         # Just get the count if we can.
         #

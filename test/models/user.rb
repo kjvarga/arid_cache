@@ -1,7 +1,6 @@
 require 'arid_cache'
 
 class User < ActiveRecord::Base
-  include AridCache
   has_many :companies, :foreign_key => :owner_id
   named_scope :companies, :joins => :companies
   

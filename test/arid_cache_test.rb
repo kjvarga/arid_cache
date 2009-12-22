@@ -3,37 +3,44 @@ require File.join(File.dirname(__FILE__), 'test_helper')
 class AridCacheTest < ActiveSupport::TestCase
   def setup
     Rails.cache.clear
+    AridCache.store.delete!
     get_user
   end
-    
+
+  test "initializes needed objects" do
+    assert_instance_of AridCache::Store, AridCache.store
+    assert_instance_of AridCache::CacheProxy, AridCache.cache
+  end
+      
   test "should respond to methods" do
-    assert_respond_to(User, :cache_store)
-    assert_respond_to(User.first, :cache_store)
-    assert_instance_of AridCache::Store, User.cache_store
-    assert_same User.cache_store, User.first.cache_store
+    assert User.respond_to?(:clear_cache)
+    assert User.first.respond_to?(:clear_cache)    
+    assert_instance_of AridCache::Store, AridCache.store
   end
     
-  test "should not clobber method_missing" do
-    assert_respond_to User.first, :name                                                                  
-  end 
-  
-  test "should allow access to valid methods" do
+  test "should not clobber model methods" do
+    assert_respond_to User.first, :name
+    assert_respond_to Company.first, :name
+    assert_nothing_raised { User.first.name }
+    assert_nothing_raised { Company.first.name }
+    
+    # Shouldn't mess with your model's method_missing
     assert_nothing_raised { User.first.is_high? }
-    assert User.first.is_high?
-  end 
+    assert User.first.is_high?  
+  end
     
   test "should allow me to cache on the model" do
     assert_nothing_raised do
       define_model_cache(User)
     end
-    assert_instance_of(Proc, User.cache_store[User.arid_cache_key('companies')].proc)
+    assert_instance_of(Proc, AridCache.store[User.arid_cache_key('companies')].proc)
   end
   
   test "should allow me to cache on the instance" do
     assert_nothing_raised do
       define_instance_cache(@user)
     end
-    assert_instance_of(Proc, @user.cache_store[@user.arid_cache_key('companies')].proc)
+    assert_instance_of(Proc, AridCache.store[@user.arid_cache_key('companies')].proc)
   end
     
   test "should raise an error on invalid dynamic caches" do
@@ -44,7 +51,7 @@ class AridCacheTest < ActiveSupport::TestCase
   
   test "should create dynamic caches given valid arguments" do
     assert_nothing_raised { @user.cached_companies }
-    assert_instance_of(Proc, @user.cache_store[@user.arid_cache_key('companies')].proc)
+    assert_instance_of(Proc, AridCache.store[@user.arid_cache_key('companies')].proc)
   end
   
   test "counts queries correctly" do
@@ -123,7 +130,6 @@ class AridCacheTest < ActiveSupport::TestCase
 
     def get_user
       @user = User.first
-      @user.cache_store.delete!
       @user.clear_cache
       define_instance_cache(@user)
       @user

@@ -1,6 +1,6 @@
 module AridCache
   class Store < Hash
-    Struct.new('Item', :cache_key, :proc, :klass, :opts)  
+    Item = Struct.new(:cache_key, :proc, :klass, :opts)  
     
     def query(key, opts, object, &block)
       return store(object, key, Proc.new, opts) if block_given? # store a proc
@@ -29,7 +29,7 @@ module AridCache
     # Store a proc
     def store(object, key, proc, opts)
       cache_key = object.arid_cache_key(key)
-      self[cache_key] = Struct::Item.new(cache_key, proc, (object.is_a?(Class) ? object : object.class), opts.symbolize_keys!)
+      self[cache_key] = AridCache::Store::Item.new(cache_key, proc, (object.is_a?(Class) ? object : object.class), opts.symbolize_keys!)
     end
     
     def find(object, key)
@@ -42,7 +42,7 @@ module AridCache
       if include?(cache_key)
         self[cache_key]
       else
-        self[cache_key] = Struct::Item.new(cache_key, Proc.new { object.send(key) }, (object.is_a?(Class) ? object : object.class), {})
+        self[cache_key] = AridCache::Store::Item.new(cache_key, Proc.new { object.send(key) }, (object.is_a?(Class) ? object : object.class), {})
       end
     end
     
@@ -54,5 +54,14 @@ module AridCache
     def delete!
       delete_if { true }
     end 
+
+    def self.instance
+      @@singleton_instance ||= self.new
+    end
+    
+    private
+
+      def initialize
+      end
   end 
 end

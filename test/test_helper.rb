@@ -7,7 +7,10 @@ require 'active_support'
 require 'active_support/test_case'
 require 'test/unit' # required by ActiveSupport::TestCase
 require 'will_paginate'
+
+# Activate ARID Cache
 require 'arid_cache'
+AridCache.init_rails
 
 # Setup logging
 log = File.expand_path(File.join(File.dirname(__FILE__), 'log', 'test.log'))
