@@ -5,11 +5,11 @@
 
 Gem::Specification.new do |s|
   s.name = %q{arid_cache}
-  s.version = "0.1.0"
+  s.version = "0.0.3"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Karl Varga"]
-  s.date = %q{2009-12-21}
+  s.date = %q{2009-12-22}
   s.description = %q{}
   s.email = %q{kjvarga@gmail.com}
   s.extra_rdoc_files = [
@@ -23,9 +23,11 @@ Gem::Specification.new do |s|
      "Rakefile",
      "VERSION",
      "arid_cache.gemspec",
+     "init.rb",
      "lib/arid_cache.rb",
      "lib/arid_cache/active_record.rb",
      "lib/arid_cache/cache_proxy.rb",
+     "lib/arid_cache/helpers.rb",
      "lib/arid_cache/store.rb",
      "rails/init.rb",
      "rails/install.rb",
