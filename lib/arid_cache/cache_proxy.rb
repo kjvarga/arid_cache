@@ -80,7 +80,6 @@ module AridCache
           cached.klass = records.proxy_reflection.klass
         elsif records.is_a?(Enumerable) && !records.empty?
           cached.klass = records.first.class
-          Rails.logger.info("** AridCache: inferring class of collection for cache #{blueprint.cache_key} to be #{cached.klass}")
         end
         
         # Convert records to an array before calling paginate.  If we don't do this
@@ -112,7 +111,6 @@ module AridCache
           cached.ids = records.collect(&:id) # get everything now that we have it
           cached.count = records.size
           cached.klass = records.empty? ? blueprint.klass : records.first.class
-          Rails.logger.info("** AridCache: inferring class of collection for cache #{blueprint.cache_key} to be #{cached.klass}")
         else
           cached = records # some base type, cache it as itself
         end
