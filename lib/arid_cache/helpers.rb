@@ -64,7 +64,7 @@ module AridCache
           end
         end
       else
-        object.class.class_eval do
+        object.class_eval do
           define_method(method_name) do |*args|
             opts = args.empty? ? {} : args.first
             AridCache.cache.send(fetch_method, AridCache.store.find(object, key), opts)
