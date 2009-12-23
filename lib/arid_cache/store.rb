@@ -28,10 +28,10 @@ module AridCache
     # Find or dynamically create a proc
     def find_or_create(object, key)
       cache_key = object.arid_cache_key(key)
-      if include?(cache_key)
+      if self.include?(cache_key)
         self[cache_key]
       else
-        self[cache_key] = AridCache::Store::Item.new(cache_key, Proc.new { object.send(key) }, (object.is_a?(Class) ? object : object.class), {})
+        self[cache_key] = AridCache::Store::Item.new(cache_key, Proc.new { |object, key| object.send(key) }, (object.is_a?(Class) ? object : object.class), {})
       end
     end
     

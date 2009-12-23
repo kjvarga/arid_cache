@@ -32,10 +32,10 @@ module AridCache
       Rails.cache.exist?(object.arid_cache_key(key))
     end
     
-    def fetch_count(blueprint, opts={})
+    def fetch_count(object, key, blueprint, opts={})
       cached = Rails.cache.read(blueprint.cache_key)
       if cached.nil? || opts[:force]
-        execute_count(blueprint)
+        execute_count(object, key, blueprint)
       elsif cached.is_a?(AridCache::CacheProxy::Result)
         cached.has_count? ? cached.count : execute_count(blueprint)
       else
@@ -43,10 +43,10 @@ module AridCache
       end
     end
     
-    def fetch(blueprint, opts)
+    def fetch(object, key, blueprint, opts)
       cached = Rails.cache.read(blueprint.cache_key)
       if cached.nil? || opts[:force]
-        execute_find(blueprint, opts)
+        execute_find(object, key, blueprint, opts)
       elsif cached.is_a?(AridCache::CacheProxy::Result)
         if cached.has_ids? # paginate and fetch here
           klass = opts[:class] || blueprint.opts[:class] || cached.klass 
@@ -65,8 +65,8 @@ module AridCache
 
     private
 
-      def execute_find(blueprint, opts)
-        records = blueprint.proc.call
+      def execute_find(object, key, blueprint, opts)
+        records = blueprint.proc.call(object, key)
 
         if !records.is_a?(Enumerable)
           return records # some base type, return it
@@ -89,8 +89,8 @@ module AridCache
         opts.include?(:page) ? records.to_a.paginate(opts_for_paginate(opts, cached)) : records      
       end
       
-      def execute_count(blueprint)
-        records = blueprint.proc.call
+      def execute_count(object, key, blueprint)
+        records = blueprint.proc.call(object, key)
         
         # Update Rails cache and return the count
         cached = AridCache::CacheProxy::Result.new(blueprint.opts)
@@ -117,16 +117,6 @@ module AridCache
         
         Rails.cache.write(blueprint.cache_key, cached)
         cached.count
-      end
-      
-      def paginate(records, opts, proc=nil) 
-        if !proc.nil?
-          ids = opts.include?(:page) ? records.paginate(opts) : records
-          records = proc.call(ids)
-          ids.is_a?(WillPaginate::Collection) ? ids.replace(records) : records
-        else
-          opts.include?(:page) ? records.paginate(opts) : records
-        end
       end
                   
       def opts_for_paginate(opts, cached)

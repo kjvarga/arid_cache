@@ -43,9 +43,9 @@ module AridCache
       end
       
       blueprint = if block_given?
-        AridCache.store.add(object, key, Proc.new, opts)
+        AridCache.store.add(object, key, Proc.new { |object, key| block.call } , opts)
       else
-        AridCache.store.add(object, key, Proc.new { object.send(key) }, opts)
+        AridCache.store.add(object, key, Proc.new { |object, key| object.send(key) }, opts)
       end
       method_for_cached(object, key, fetch_method, method_name)
       blueprint
@@ -59,14 +59,14 @@ module AridCache
         (class << object; self; end).instance_eval do
           define_method(method_name) do |*args|
             opts = args.empty? ? {} : args.first
-            AridCache.cache.send(fetch_method, AridCache.store.find(object, key), opts)
+            AridCache.cache.send(fetch_method, self, key, AridCache.store.find(self, key), opts)
           end
         end
       else
         object.class_eval do
           define_method(method_name) do |*args|
             opts = args.empty? ? {} : args.first
-            AridCache.cache.send(fetch_method, AridCache.store.find(object, key), opts)
+            AridCache.cache.send(fetch_method, self, key, AridCache.store.find(self, key), opts)
           end
         end
       end
