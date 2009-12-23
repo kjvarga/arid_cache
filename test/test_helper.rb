@@ -7,6 +7,7 @@ require 'active_support'
 require 'active_support/test_case'
 require 'test/unit' # required by ActiveSupport::TestCase
 require 'will_paginate'
+require 'ruby-debug'
 
 # Activate ARID Cache
 require 'arid_cache'

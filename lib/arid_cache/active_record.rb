@@ -16,6 +16,10 @@ module AridCache
         AridCache.cache.clear(self)
       end
 
+      def get_singleton
+        class << self; self; end
+      end
+      
       # Return a cache key for the given key e.g.
       #   User.arid_cache_key('companies')       => 'user-companies'
       #   User.first.arid_cache_key('companies') => 'users/20090120091123-companies'
@@ -25,7 +29,7 @@ module AridCache
       end
 
       def respond_to?(method, include_private = false) #:nodoc:
-        if (method.to_s =~ /^cache[d]?_(.*)(_count)?$/).nil?
+        if (method.to_s =~ /^class_cache_.*|cache_.*|cached_.*(_count)?$/).nil?
           super(method, include_private)
         elsif method.to_s =~ /^cached_(.*)_count$/
           AridCache.store.has?(self, "#{$1}_count") || AridCache.store.has?(self, $1) || super("#{$1}_count", include_private) || super($1, include_private)

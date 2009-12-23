@@ -8,5 +8,6 @@ ActiveRecord::Schema.define do
     t.column "name",  :text
     t.column "owner_id", :integer
     t.column "country_id", :integer
+    t.column "employees", :integer    
   end
 end

@@ -9,7 +9,7 @@ Gem::Specification.new do |s|
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Karl Varga"]
-  s.date = %q{2009-12-22}
+  s.date = %q{2009-12-23}
   s.description = %q{}
   s.email = %q{kjvarga@gmail.com}
   s.extra_rdoc_files = [
@@ -30,8 +30,6 @@ Gem::Specification.new do |s|
      "lib/arid_cache/helpers.rb",
      "lib/arid_cache/store.rb",
      "rails/init.rb",
-     "rails/install.rb",
-     "rails/uninstall.rb",
      "spec/arid_cache_spec.rb",
      "spec/spec.opts",
      "spec/spec_helper.rb",

@@ -118,21 +118,59 @@ class AridCacheTest < ActiveSupport::TestCase
   
   test "calling cache_ defines methods on the object" do
     assert !User.method_defined?(:cached_favorite_companies)
-    @user.cache_favorite_companies(:order => 'name DESC') do
-      @user.companies
+    User.cache_favorite_companies(:order => 'name DESC') do
+      User.companies
     end
-    assert User.method_defined?(:cached_favorite_companies)
+    assert User.respond_to?(:cached_favorite_companies)
+    assert_nothing_raised do
+      User.method(:cached_favorite_companies)
+    end    
   end
-       
-  # test "should empty the Rails cache" do
-  #   @user.cached_companies
-  #   User.cached_companies
-  #   assert Rails.cache.exist?(@user.arid_cache_key('companies'))
-  #   assert Rails.cache.exist?(User.arid_cache_key('companies'))
-  #   User.clear_cache
-  #   assert Rails.cache.exist?(@user.arid_cache_key('companies'))
-  #   assert Rails.cache.exist?(User.arid_cache_key('companies'))   
-  # end
+  
+  test "pagination should not result in an extra query" do
+    assert_queries(1) do
+      @user.cached_big_companies(:page => 1)
+    end
+    assert_queries(1) do
+      User.cached_companies(:page => 1)
+    end
+  end
+  
+  test "should support a 'force' option" do
+    # ActiveRecord caches the result of the proc, so we need to
+    # use different instances of the user to test the force option.
+    uncached_user = User.first
+    companies = @user.companies
+    size = companies.size
+    assert_queries(1) do
+      assert_equal companies, @user.cached_companies
+      assert_equal size, @user.cached_companies_count
+      assert_equal size, uncached_user.cached_companies_count
+    end
+    assert_queries(2) do
+      assert_equal companies, uncached_user.cached_companies(:force => true)
+      assert_equal size, uncached_user.cached_companies_count(:force => true)
+    end
+  end
+  
+  test "should handle various different model instances" do
+    one = User.first
+    two = User.first :offset => 1
+    assert_not_same one, two
+    assert_equal one.companies, one.cached_companies
+    assert_equal two.companies, two.cached_companies
+  end
+           
+  test "should empty the Rails cache" do
+    define_model_cache(User)
+    @user.cached_companies
+    User.cached_companies
+    assert Rails.cache.exist?(@user.arid_cache_key('companies'))
+    assert Rails.cache.exist?(User.arid_cache_key('companies'))
+    User.clear_cache
+    assert Rails.cache.exist?(@user.arid_cache_key('companies'))
+    assert Rails.cache.exist?(User.arid_cache_key('companies'))   
+  end
       
   protected
 

@@ -12,7 +12,6 @@ module AridCache
     #  a Fixnum count if the request is for a count or the results of
     #  the ActiveRecord query otherwise.
     def lookup(object, key, opts, &block)
-      #require 'ruby-debug'; debugger
       if key =~ /(.*)_count$/
         if block_given?
           define(object, key, opts, &block)
@@ -51,9 +50,9 @@ module AridCache
       method_for_cached(object, key, fetch_method, method_name)
       blueprint
     end
-    
+
     private
-    
+
     def method_for_cached(object, key, fetch_method=:fetch, method_name=nil)
       method_name = "cached_" + (method_name || key)
       if object.is_a?(Class)

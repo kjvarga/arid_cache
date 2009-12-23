@@ -1,3 +1,6 @@
 bob:
   name: Bob
   email: bob@ibm.com
+john:
+  name: John
+  email: john@ibm.com

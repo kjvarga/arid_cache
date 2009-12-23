@@ -83,8 +83,11 @@ module AridCache
           Rails.logger.info("** AridCache: inferring class of collection for cache #{blueprint.cache_key} to be #{cached.klass}")
         end
         
+        # Convert records to an array before calling paginate.  If we don't do this
+        # and the result is a named scope, paginate will trigger an additional query
+        # to load the page rather than just using the records we have already fetched.
         Rails.cache.write(blueprint.cache_key, cached)
-        opts.include?(:page) ? records.paginate(opts_for_paginate(opts, cached)) : records      
+        opts.include?(:page) ? records.to_a.paginate(opts_for_paginate(opts, cached)) : records      
       end
       
       def execute_count(blueprint)
