@@ -78,8 +78,8 @@ module AridCache
         cached.count = records.size
         if records.respond_to?(:proxy_reflection) # association proxy
           cached.klass = records.proxy_reflection.klass
-        elsif records.is_a?(Enumerable)
-          cached.klass = records.empty? ? blueprint.klass : records.first.class
+        elsif records.is_a?(Enumerable) && !records.empty?
+          cached.klass = records.first.class
           Rails.logger.info("** AridCache: inferring class of collection for cache #{blueprint.cache_key} to be #{cached.klass}")
         end
         
