@@ -32,9 +32,9 @@ module AridCache
       Rails.cache.exist?(object.arid_cache_key(key))
     end
     
-    def fetch_count(blueprint, opts=nil)
+    def fetch_count(blueprint, opts={})
       cached = Rails.cache.read(blueprint.cache_key)
-      if cached.nil?
+      if cached.nil? || opts[:force]
         execute_count(blueprint)
       elsif cached.is_a?(AridCache::CacheProxy::Result)
         cached.has_count? ? cached.count : execute_count(blueprint)
@@ -45,14 +45,15 @@ module AridCache
     
     def fetch(blueprint, opts)
       cached = Rails.cache.read(blueprint.cache_key)
-      if cached.nil?
+      if cached.nil? || opts[:force]
         execute_find(blueprint, opts)
       elsif cached.is_a?(AridCache::CacheProxy::Result)
         if cached.has_ids? # paginate and fetch here
+          klass = opts[:class] || blueprint.opts[:class] || cached.klass 
           if opts.include?(:page)
-            blueprint.klass.paginate(cached.ids, opts_for_paginate(opts, cached))
+            klass.paginate(cached.ids, opts_for_paginate(opts, cached))
           else
-            blueprint.klass.find(cached.ids, opts_for_find(opts, cached))
+            klass.find(cached.ids, opts_for_find(opts, cached))
           end
         else
           execute_find(blueprint, opts)
@@ -79,7 +80,7 @@ module AridCache
           cached.klass = records.proxy_reflection.klass
         elsif records.is_a?(Enumerable)
           cached.klass = records.empty? ? blueprint.klass : records.first.class
-          RAILS_DEFAULT_LOGGER.info("** AridCache: inferring class of collection for cache #{blueprint.cache_key} to be #{cached.klass}")
+          Rails.logger.info("** AridCache: inferring class of collection for cache #{blueprint.cache_key} to be #{cached.klass}")
         end
         
         Rails.cache.write(blueprint.cache_key, cached)
