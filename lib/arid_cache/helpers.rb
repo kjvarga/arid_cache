@@ -36,37 +36,33 @@ module AridCache
     #
     # If no block is provided, create one dynamically.
     #
-    # @return an AridCache::Store::Item.
+    # @return an AridCache::Store::Blueprint.
     def define(object, key, opts, fetch_method=:fetch, method_name=nil, &block)
       if !block_given? && !object.respond_to?(key)
         raise ArgumentError.new("#{object} doesn't respond to #{key}!  Cannot dynamically create a block for your cache item.")
       end
       
-      blueprint = if block_given?
-        AridCache.store.add(object, key, Proc.new { |object, key| block.call } , opts)
-      else
-        AridCache.store.add(object, key, Proc.new { |object, key| object.send(key) }, opts)
-      end
-      method_for_cached(object, key, fetch_method, method_name)
+      blueprint = AridCache.store.add(object, key, block, opts)
+      method_for_cached(object, key, fetch_method, method_name, &block)
       blueprint
     end
 
     private
 
-    def method_for_cached(object, key, fetch_method=:fetch, method_name=nil)
+    def method_for_cached(object, key, fetch_method=:fetch, method_name=nil, &block)
       method_name = "cached_" + (method_name || key)
       if object.is_a?(Class)
         (class << object; self; end).instance_eval do
-          define_method(method_name) do |*args|
+          define_method(method_name) do |*args, &block|
             opts = args.empty? ? {} : args.first
-            AridCache.cache.send(fetch_method, self, key, AridCache.store.find(self, key), opts)
+            AridCache.cache.send(fetch_method, self, key, opts, &block)
           end
         end
       else
         object.class_eval do
-          define_method(method_name) do |*args|
+          define_method(method_name) do |*args, &block|
             opts = args.empty? ? {} : args.first
-            AridCache.cache.send(fetch_method, self, key, AridCache.store.find(self, key), opts)
+            AridCache.cache.send(fetch_method, self, key, opts, &block)
           end
         end
       end

@@ -11,7 +11,7 @@ module AridCache
   class Error < StandardError; end
 
   def self.cache
-    AridCache::CacheProxy.instance
+    AridCache::CacheProxy
   end
 
   def self.store
