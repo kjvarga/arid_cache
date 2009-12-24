@@ -94,33 +94,33 @@ module AridCache
     private
 
       def execute_find
-        records = block.nil? ? object.instance_eval(key) : object.instance_eval(&block)
-
-        if !records.is_a?(Enumerable)
-          return records # some base type, return it
-        end
-                
-        # Update Rails cache and return the records
+        records = block.nil? ? object.instance_eval(key) : object.instance_eval(&block)        
         self.cached = AridCache::CacheProxy::Result.new
-        self.cached.ids = records.collect(&:id)
-        self.cached.count = records.size
-        if records.respond_to?(:proxy_reflection) # association proxy
-          self.cached.klass = records.proxy_reflection.klass
-        elsif records.is_a?(Enumerable) && !records.empty?
-          self.cached.klass = records.first.class
+        
+        if !records.is_a?(Enumerable)
+          self.cached = records # some base type, cache it as itself
+        else
+          self.cached.ids = records.collect(&:id)
+          self.cached.count = records.size
+          if records.respond_to?(:proxy_reflection) # association proxy
+            self.cached.klass = records.proxy_reflection.klass
+          elsif !records.empty?
+            self.cached.klass = records.first.class
+          else
+            self.cached.klass = object_base_class
+          end
         end
+        Rails.cache.write(cache_key, self.cached)
         
         # Convert records to an array before calling paginate.  If we don't do this
         # and the result is a named scope, paginate will trigger an additional query
         # to load the page rather than just using the records we have already fetched.
-        Rails.cache.write(cache_key, self.cached)
-        opts.include?(:page) ? records.to_a.paginate(opts_for_paginate) : records      
+        (opts.include?(:page) && records.respond_to?(:to_a)) ? records.to_a.paginate(opts_for_paginate) : records      
       end
       
       def execute_count
         records = block.nil? ? object.instance_eval(key) : object.instance_eval(&block)
-        
-        # Update Rails cache and return the count
+
         self.cached = AridCache::CacheProxy::Result.new
 
         # Just get the count if we can.
@@ -144,7 +144,7 @@ module AridCache
         end
         
         Rails.cache.write(cache_key, self.cached)
-        self.cached.count
+        self.cached.respond_to?(:count) ? self.cached.count : self.cached
       end
                   
       def opts_for_paginate
@@ -163,7 +163,7 @@ module AridCache
       end
       
       def find_class_of_results
-        opts[:class] || (blueprint && blueprint.opts[:class]) || cached.klass 
+        opts[:class] || (blueprint && blueprint.opts[:class]) || cached.klass || object_base_class
       end
   end
 end
