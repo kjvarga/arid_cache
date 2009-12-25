@@ -91,6 +91,18 @@ You can limit the results returned using <tt>:limit</tt> and <tt>:offset</tt>:
     self.active.find(:order => 'activity DESC', :limit => 10)
   end
 
+Dynamic caches that make use of other cached collections:
+
+  @tracks  = @genre.cached_highlight_tracks(:order => 'release_date DESC', :include => [:album, :artist]) do
+    cached_tracks(:order => 'release_date DESC', :limit => 10, :include => [:album, :artist])
+  end
+  @artists = @genre.cached_highlight_artists do
+    cached_artists(:limit => 10)
+  end
+  @albums  = @genre.cached_highlight_albums(:order => 'release_date DESC', :include => :artist) do
+    cached_albums(:order => 'release_date DESC', :limit => 3, :include => :artist)
+  end
+    
 More docs to come...
   
 == Note on Patches/Pull Requests
