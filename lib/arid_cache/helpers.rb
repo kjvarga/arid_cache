@@ -12,10 +12,10 @@ module AridCache
     #  a Fixnum count if the request is for a count or the results of
     #  the ActiveRecord query otherwise.
     def lookup(object, key, opts, &block)
-      if key =~ /(.*)_count$/
-        if block_given?
-          define(object, key, opts, &block)
-        elsif AridCache.store.has?(object, $1)
+      if !block.nil?
+        define(object, key, opts, &block)
+      elsif key =~ /(.*)_count$/
+        if AridCache.store.has?(object, $1)
           method_for_cached(object, $1, :fetch_count, key)
         elsif object.respond_to?(key)
           define(object, key, opts, :fetch_count)
@@ -38,7 +38,7 @@ module AridCache
     #
     # @return an AridCache::Store::Blueprint.
     def define(object, key, opts, fetch_method=:fetch, method_name=nil, &block)
-      if !block_given? && !object.respond_to?(key)
+      if block.nil? && !object.respond_to?(key)
         raise ArgumentError.new("#{object} doesn't respond to #{key}!  Cannot dynamically create a block for your cache item.")
       end
       

@@ -55,12 +55,11 @@ module AridCache
       self.opts = opts || {}
       self.blueprint = AridCache.store.find(object, key)
       self.cache_key = object.arid_cache_key(key)
-      self.cached = nil
+      self.cached = Rails.cache.read(cache_key)
       self.block = block
     end
             
     def fetch_count
-      cached = Rails.cache.read(cache_key)
       if cached.nil? || opts[:force]
         execute_count
       elsif cached.is_a?(AridCache::CacheProxy::Result)
@@ -72,7 +71,6 @@ module AridCache
 
           
     def fetch
-      cached = Rails.cache.read(cache_key)
       if cached.nil? || opts[:force]
         execute_find
       elsif cached.is_a?(AridCache::CacheProxy::Result)
@@ -95,33 +93,34 @@ module AridCache
 
       def execute_find
         records = block.nil? ? object.instance_eval(key) : object.instance_eval(&block)        
-        self.cached = AridCache::CacheProxy::Result.new
+        cached = AridCache::CacheProxy::Result.new
         
         if !records.is_a?(Enumerable)
-          self.cached = records # some base type, cache it as itself
+          cached = records # some base type, cache it as itself
         else
-          self.cached.ids = records.collect(&:id)
-          self.cached.count = records.size
+          cached.ids = records.collect(&:id)
+          cached.count = records.size
           if records.respond_to?(:proxy_reflection) # association proxy
-            self.cached.klass = records.proxy_reflection.klass
+            cached.klass = records.proxy_reflection.klass
           elsif !records.empty?
-            self.cached.klass = records.first.class
+            cached.klass = records.first.class
           else
-            self.cached.klass = object_base_class
+            cached.klass = object_base_class
           end
         end
-        Rails.cache.write(cache_key, self.cached)
+        Rails.cache.write(cache_key, cached)
         
         # Convert records to an array before calling paginate.  If we don't do this
         # and the result is a named scope, paginate will trigger an additional query
         # to load the page rather than just using the records we have already fetched.
+        self.cached = cached
         (opts.include?(:page) && records.respond_to?(:to_a)) ? records.to_a.paginate(opts_for_paginate) : records      
       end
       
       def execute_count
         records = block.nil? ? object.instance_eval(key) : object.instance_eval(&block)
 
-        self.cached = AridCache::CacheProxy::Result.new
+        cached = AridCache::CacheProxy::Result.new
 
         # Just get the count if we can.
         #
@@ -133,18 +132,19 @@ module AridCache
         # on an association proxy will hower trigger a select because it loads up the target
         # and passes the respond_to? on to it.
         if records.respond_to?(:proxy_reflection) || records.respond_to?(:proxy_options)
-          self.cached.count = records.count # just get the count
-          self.cached.klass = object_base_class
+          cached.count = records.count # just get the count
+          cached.klass = object_base_class
         elsif records.is_a?(Enumerable)
-          self.cached.ids = records.collect(&:id) # get everything now that we have it
-          self.cached.count = records.size
-          self.cached.klass = records.empty? ? object_base_class : records.first.class
+          cached.ids = records.collect(&:id) # get everything now that we have it
+          cached.count = records.size
+          cached.klass = records.empty? ? object_base_class : records.first.class
         else
-          self.cached = records # some base type, cache it as itself
+          cached = records # some base type, cache it as itself
         end
         
-        Rails.cache.write(cache_key, self.cached)
-        self.cached.respond_to?(:count) ? self.cached.count : self.cached
+        Rails.cache.write(cache_key, cached)
+        self.cached = cached
+        cached.respond_to?(:count) ? cached.count : cached
       end
                   
       def opts_for_paginate
@@ -153,9 +153,11 @@ module AridCache
         paginate_opts
       end
     
+      VALID_FIND_OPTIONS = [ :conditions, :include, :joins, :limit, :offset, :order, :select, :readonly, :group, :having, :from, :lock ]
+      
       def opts_for_find
-        find_opts = blueprint.nil? ? opts.symbolize_keys : blueprint.opts.merge(opts.symbolize_keys)
-        find_opts.values_at([:include, :joins, :conditions, :order, :group, :having]).compact
+        find_opts = blueprint.nil? ? opts.symbolize_keys : blueprint.opts.merge(opts.symbolize_keys) 
+        find_opts.delete_if { |k,v| !VALID_FIND_OPTIONS.include?(k) }
       end
       
       def object_base_class
