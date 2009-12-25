@@ -42,6 +42,18 @@ You can pass options like <tt>:include</tt> (or any other valid <tt>find</tt> op
 
 ARID Cache intercepts calls to <tt>cached_</tt> methods using <tt>method_missing</tt> then defines those methods on your models as they are called, so they bypass method missing on subsequent calls.
 
+== Install
+
+Add this to your <tt>config/environment.rb</tt> file:
+  
+  config.gem 'arid_cache'
+  
+Then
+
+  rake gems:install
+
+(Requires having GemCutter in your gem sources.)
+
 == Examples
 
 ==== Given the following model:
