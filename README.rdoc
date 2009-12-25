@@ -59,7 +59,6 @@ Then
 ==== Given the following model:
 
   class User < ActiveRecord::Base
-    include AridCache
     has_many    :pets
     has_one     :preferences
     named_scope :active, :conditions => [ 'updated_at <= ', 5.minutes.ago ]
