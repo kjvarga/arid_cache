@@ -1,12 +1,6 @@
-<% for digit in 1..5 %>
+<% for digit in 1..15 %>
 acme_<%= digit %>:
   name: Acme <%= digit %>
-  owner_id: 1
+  owner_id: <%= rand(10) %>
   employees: <%= rand(200) %>
-<% end %>
-<% for digit in 1..5 %>
-starbucks_<%= digit %>:
-  name: Starbucks <%= digit %>
-  owner_id: 2
-  employees: <%= rand(50) %>
 <% end %>

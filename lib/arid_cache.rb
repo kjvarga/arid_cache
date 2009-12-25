@@ -14,6 +14,18 @@ module AridCache
     AridCache::CacheProxy
   end
 
+  def self.clear_all_caches
+    AridCache::CacheProxy.clear_all_caches
+  end 
+  
+  def self.clear_class_caches(object)
+    AridCache::CacheProxy.clear_class_caches(object)
+  end 
+      
+  def self.clear_instance_caches(object)
+    AridCache::CacheProxy.clear_instance_caches(object)
+  end  
+    
   def self.store
     AridCache::Store.instance
   end

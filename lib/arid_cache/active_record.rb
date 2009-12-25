@@ -12,10 +12,19 @@ module AridCache
     end
     
     module MirrorMethods
-      def clear_cache
-        AridCache.cache.clear(self)
+      def clear_all_caches
+        AridCache.cache.clear_class_caches(self)
+        AridCache.cache.clear_instance_caches(self)
       end
 
+      def clear_class_caches
+        AridCache.cache.clear_class_caches(self)
+      end
+
+      def clear_instance_caches
+        AridCache.cache.clear_instance_caches(self)
+      end
+                  
       def get_singleton
         class << self; self; end
       end

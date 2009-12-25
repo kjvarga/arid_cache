@@ -65,9 +65,9 @@ class AridCacheTest < ActiveSupport::TestCase
   end
   
   test "paginates results" do
-    results = @user.cached_companies(:page => 1)
+    results = @user.cached_companies(:page => 1, :per_page => 3)
     assert_kind_of WillPaginate::Collection, results
-    assert_equal 2, results.size
+    assert_equal 3, results.size
     assert_equal @user.companies.count, results.total_entries
     assert_equal 1, results.current_page
   end
@@ -82,8 +82,9 @@ class AridCacheTest < ActiveSupport::TestCase
   test "works for different pages" do
     results = @user.cached_companies(:page => 2, :per_page => 3)
     assert_kind_of WillPaginate::Collection, results
-    assert_equal (@user.companies.count-3)%3, results.size
-    assert_equal @user.companies.count, results.total_entries    
+    assert results.size <= 3
+    assert_equal @user.companies.count, results.total_entries  
+    assert_equal 2, results.current_page  
   end
   
   test "ignores random parameters" do
@@ -106,13 +107,14 @@ class AridCacheTest < ActiveSupport::TestCase
   end
         
   test "gets the count only if it's requested first" do
+    count = @user.companies.count
     assert_queries(1) do
-      assert_equal 5, @user.cached_companies_count
-      assert_equal 5, @user.cached_companies_count
+      assert_equal count, @user.cached_companies_count
+      assert_equal count, @user.cached_companies_count
     end
     assert_queries(1) do
-      assert_equal 5, @user.cached_companies.size
-      assert_equal 5, @user.cached_companies_count
+      assert_equal count, @user.cached_companies.size
+      assert_equal count, @user.cached_companies_count
     end
   end
   
@@ -125,6 +127,24 @@ class AridCacheTest < ActiveSupport::TestCase
     assert_nothing_raised do
       User.method(:cached_favorite_companies)
     end    
+  end
+
+  test "applies limit and offset" do
+    @user.cached_limit_companies do
+      companies
+    end
+    assert_equal 2, @user.cached_limit_companies(:limit => 2).size
+    assert_equal 3, @user.cached_limit_companies(:limit => 3).size
+    assert_equal @user.companies.all(:limit => 2, :offset => 1), @user.cached_limit_companies(:limit => 2, :offset => 1)
+    assert_equal @user.companies.size, @user.cached_limit_companies.size    
+    User.cached_successful_limit_companies do
+      User.successful
+    end
+    raise User.cached_successful_limit_companies.inspect
+    assert_equal 2, User.cached_successful_limit_companies(:limit => 2).size
+    assert_equal 3, User.cached_successful_limit_companies(:limit => 3).size
+    assert_equal User.successful.all(:limit => 2, :offset => 1), User.cached_successful_limit_companies(:limit => 2, :offset => 1)
+    assert_equal User.successful.size, User.cached_successful_limit_companies.size  
   end
   
   test "pagination should not result in an extra query" do
@@ -160,7 +180,13 @@ class AridCacheTest < ActiveSupport::TestCase
     assert_equal one.companies, one.cached_companies
     assert_equal two.companies, two.cached_companies
   end
-           
+
+  test "should handle arrays of non-active record instances" do
+    assert_equal @user.pet_names, @user.cached_pet_names
+    assert_equal @user.pet_names, @user.cached_pet_names
+    assert_equal @user.pet_names.count, @user.cached_pet_names_count
+  end
+             
   test "should empty the Rails cache" do
     define_model_cache(User)
     @user.cached_companies

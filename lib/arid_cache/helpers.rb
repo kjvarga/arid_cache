@@ -42,14 +42,29 @@ module AridCache
         raise ArgumentError.new("#{object} doesn't respond to #{key}!  Cannot dynamically create a block for your cache item.")
       end
       
-      blueprint = AridCache.store.add(object, key, block, opts)
-      method_for_cached(object, key, fetch_method, method_name, &block)
+      # FIXME: Pass default options to store.add
+      # Pass nil in for now until we get the cache_ calls working.
+      # This means that the first time you define a dynamic cache
+      # (by passing in a block), the options you used are not
+      # stored in the blueprint and applied to each subsequent call.
+      #
+      # Otherwise we have a situation where a :limit passed in to the
+      # first call persists when no options are passed in on subsequent calls,
+      # but if a different :limit is passed in that limit is applied.
+      #
+      # I think in this scenario one would expect no limit to be applied
+      # if no options are passed in.
+      #
+      # When the cache_ methods are supported, those options should be
+      # remembered and applied to the collection however.
+      blueprint = AridCache.store.add(object, key, block, nil)
+      method_for_cached(object, key, fetch_method, method_name)
       blueprint
     end
 
     private
 
-    def method_for_cached(object, key, fetch_method=:fetch, method_name=nil, &block)
+    def method_for_cached(object, key, fetch_method=:fetch, method_name=nil)
       method_name = "cached_" + (method_name || key)
       if object.is_a?(Class)
         (class << object; self; end).instance_eval do

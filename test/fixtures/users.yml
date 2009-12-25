@@ -1,6 +1,5 @@
-bob:
-  name: Bob
-  email: bob@ibm.com
-john:
-  name: John
-  email: john@ibm.com
+<% for digit in 1..10 %>
+user_<%= digit %>:
+  name: Bob <%= digit %>
+  email: bob<%= digit %>@ibm.com
+<% end %>

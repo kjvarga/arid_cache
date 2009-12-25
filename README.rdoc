@@ -1,10 +1,50 @@
 == ARID Cache
 
-ARID Cache is a DRY ActiveRecord ID cache.
+ARID Cache makes caching easy and effective.  ARID cache supports caching on all your model named scopes, class methods and instance methods right out of the box.  ARID cache prevents caching logic from cluttering your models and clarifies your logic by making explicit calls to cached result sets.
 
-== Example
+ARID Cache is designed for handling large, expensive ActiveRecord collections but is equally useful for caching anything else as well.
 
-Given the following model:
+=== Counts for free
+
+ARID Cache gives you counts for free.  When a large collection is stored in the cache
+ARID Cache stores the count as well so the next time you want request the count it
+just takes a single read from the cache.  This is also supported for your non-ActiveRecord
+collections if the collection <tt>responds_to?(:count)</tt>.
+
+Given that we have a cache like <tt>album.cached_tracks</tt> we can get the count by calling <tt>album.cached_tracks_count</tt>.
+  
+=== Auto-expiring cache keys
+  
+Caches on model instances automatically incorporate the ActiveRecord <tt>cache_key</tt> which includes the <tt>updated_at</tt> timestamp of that instance, making them auto-expire when the instance is updated.
+
+Caches on your model classes (like on the results of named scopes) will not expire however.
+
+ARID cache provides methods to help you expire your caches.
+  
+  AridCache.clear_all_caches  => expires all ARID Cache caches
+  Model.clear_all_caches      => expires class and instance-level caches for this model
+  Model.clear_instance_caches => expires instance-level caches for this model
+  Model.clear_class_caches    => expires class-level caches for this model
+  
+These methods are also available on model instances.
+
+ARID Cache keys are based on the method you call to create the cache.  For example:
+  Album.cached_featured_albums  => cache key is arid-cache-album-featured_albums
+  album.cached_top_tracks       => cache key like arid-cache-albums/2-20090930200-top_tracks
+
+=== Support for pagination and options to <tt>find</tt>
+
+ARID cache performs pagination and applies <tt>:limit</tt> and <tt>:offset</tt> to the IDs in memory and only selects the page/sub-set from the database, directly from the target table.
+
+You can pass options like <tt>:include</tt> (or any other valid <tt>find</tt> options) to augment the results of your cached query.
+
+=== Efficiency
+
+ARID Cache intercepts calls to <tt>cached_</tt> methods using <tt>method_missing</tt> then defines those methods on your models as they are called, so they bypass method missing on subsequent calls.
+
+== Examples
+
+==== Given the following model:
 
   class User < ActiveRecord::Base
     include AridCache
@@ -13,12 +53,11 @@ Given the following model:
     named_scope :active, :conditions => [ 'updated_at <= ', 5.minutes.ago ]
   end
 
-ARID Cache provides these methods:
+==== ARID Cache provides these methods:
  
   User.cached_active         # caches the user IDs and the count
   User.cached_active_count   # gets the count for free
 
-  user = User.first
   user.cached_pets           # caches the pets IDs and the count
   user.cached_pets_count     # gets the count for free
    
@@ -28,9 +67,9 @@ selects where the IDs are the cached IDs.
 
 It also gives you paging using WillPaginate.  The IDs from the cache are paginated and
 only that page is selected from the database - again directly from the table, without
-any complex joins or anything.
+any complex joins.
 
-Some examples of pagination:
+==== Some examples of pagination:
 
   User.cached_active.paginate(:page => 1, :per_page => 30)
   User.cached_active.paginate(:page => 1)
@@ -40,21 +79,20 @@ You can also include options for find, such as <tt>:join</tt>, <tt>:include</tt>
 
   User.cached_active.paginate(:page => 1, :include => :preferences)
   User.cached_active.paginate(:page => 1, :order => 'created_at DESC') # don't change the order, just enforce it
-  
-You can configure your cached blocks in your models:
-  
-  class User < ActiveRecord::Base
-    include AridCache
-    has_many    :pets
-    has_one     :preferences
-    named_scope :active, :conditions => [ 'updated_at <= ', 5.minutes.ago ]
-    
-    self.cached_active_users(:order => 'created_at DESC', :include => :preferences) do
-      self.active
-    end
-  end
-  
 
+You can limit the results returned using <tt>:limit</tt> and <tt>:offset</tt>:
+
+  user.cached_pets(:limit => 2, :include => :toys)
+  user.cached_pets(:limit => 2, :offset => 3, :include => :toys)
+  
+==== You can dynamically create caches
+
+  User.cached_most_active_users do
+    self.active.find(:order => 'activity DESC', :limit => 10)
+  end
+
+More docs to come...
+  
 == Note on Patches/Pull Requests
 
 * Fork the project.

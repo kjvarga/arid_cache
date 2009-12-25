@@ -8,10 +8,10 @@ class User < ActiveRecord::Base
   def big_companies
     companies.find :all, :conditions => [ 'employees > 20' ]
   end
-  #class << self
-    #cache_big_companies(:order => 'name DESC')
-  #end
-  
+
+  def pet_names
+    ['Fuzzy', 'Peachy']
+  end
   
   def method_missing(method, *args)
     if method == :is_high?
