@@ -6,7 +6,11 @@ begin
   Jeweler::Tasks.new do |gem|
     gem.name = "arid_cache"
     gem.summary = %Q{Automates efficient caching of your ActiveRecord collections, gives you counts for free and supports pagination.}
-    gem.description = %Q{}
+    gem.description = <<-END.gsub(/^\s+/, '')
+      ARID Cache makes caching easy and effective.  ARID cache supports caching on all your model named scopes, class methods and instance methods right out of the box.  ARID cache prevents caching logic from cluttering your models and clarifies your logic by making explicit calls to cached result sets.
+      
+      ARID Cache is designed for handling large, expensive ActiveRecord collections but is equally useful for caching anything else as well.
+    END
     gem.email = "kjvarga@gmail.com"
     gem.homepage = "http://github.com/kjvarga/arid_cache"
     gem.authors = ["Karl Varga"]
