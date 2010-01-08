@@ -1,46 +1,10 @@
-== ARID Cache
+= ARID Cache
 
-ARID Cache makes caching easy and effective.  ARID cache supports caching on all your model named scopes, class methods and instance methods right out of the box.  ARID cache prevents caching logic from cluttering your models and clarifies your logic by making explicit calls to cached result sets.
+ARID Cache makes caching easy and effective.  ARID cache supports caching on all of your ActiveRecord model named scopes, class and instance methods right out of the box.  ARID cache keeps caching logic out of your model methods and clarifies your view code by making calls to cached result sets explicit.
 
-ARID Cache is designed for handling large, expensive ActiveRecord collections but is equally useful for caching anything else as well.
+ARID Cache supports caching large, expensive ActiveRecord collections by caching only the model IDs, provides efficient in-memory pagination of your cached collections, and gives you collection counts for free.  Non-ActiveRecord collection data is cached unchanged allowing you to cache the results of any expensive operation simply by prepending your method call with <tt>cached_</tt>.
 
-=== Counts for free
-
-ARID Cache gives you counts for free.  When a large collection is stored in the cache
-ARID Cache stores the count as well so the next time you want request the count it
-just takes a single read from the cache.  This is also supported for your non-ActiveRecord
-collections if the collection <tt>responds_to?(:count)</tt>.
-
-Given that we have a cache like <tt>album.cached_tracks</tt> we can get the count by calling <tt>album.cached_tracks_count</tt>.
-  
-=== Auto-expiring cache keys
-  
-Caches on model instances automatically incorporate the ActiveRecord <tt>cache_key</tt> which includes the <tt>updated_at</tt> timestamp of that instance, making them auto-expire when the instance is updated.
-
-Caches on your model classes (like on the results of named scopes) will not expire however.
-
-ARID cache provides methods to help you expire your caches.
-  
-  AridCache.clear_all_caches  => expires all ARID Cache caches
-  Model.clear_all_caches      => expires class and instance-level caches for this model
-  Model.clear_instance_caches => expires instance-level caches for this model
-  Model.clear_class_caches    => expires class-level caches for this model
-  
-These methods are also available on model instances.
-
-ARID Cache keys are based on the method you call to create the cache.  For example:
-  Album.cached_featured_albums  => cache key is arid-cache-album-featured_albums
-  album.cached_top_tracks       => cache key like arid-cache-albums/2-20090930200-top_tracks
-
-=== Support for pagination and options to <tt>find</tt>
-
-ARID cache performs pagination and applies <tt>:limit</tt> and <tt>:offset</tt> to the IDs in memory and only selects the page/sub-set from the database, directly from the target table.
-
-You can pass options like <tt>:include</tt> (or any other valid <tt>find</tt> options) to augment the results of your cached query.
-
-=== Efficiency
-
-ARID Cache intercepts calls to <tt>cached_</tt> methods using <tt>method_missing</tt> then defines those methods on your models as they are called, so they bypass method missing on subsequent calls.
+ARID Cache simplifies caching by creating auto-expiring cache keys for you and provides methods to help you manage your caches at the global, model class, model instance and per-cache level.
 
 == Install
 
@@ -54,6 +18,74 @@ Then
 
 (Requires having GemCutter in your gem sources.)
 
+= Overview
+
+==  Cache Keys & Managing your Caches
+
+==== Cache Keys
+
+ARID Cache keys are constructed based on the method you call to create the cache.  For example:
+
+  Album.cached_featured_albums  => cache key is arid-cache-album-featured_albums
+  album.cached_top_tracks       => cache key is like arid-cache-albums/2-20090930200-top_tracks
+    
+Caches on model instances automatically incorporate the ActiveRecord <tt>cache_key</tt> which includes the <tt>updated_at</tt> timestamp of that instance, making them auto-expire when the instance is updated.  (There will soon be an option to turn off this behaviour.)
+
+Caches on your model classes (like on the results of named scopes) will not expire.  (I will soon add support for passing an <tt>:expires_in</tt> option to the cache store.)
+
+==== Managing your Caches
+
+ARID cache provides these methods to help you manage your caches:
+  
+  AridCache.clear_all_caches  => expires all ARID Cache caches
+  Model.clear_all_caches      => expires class and instance-level caches for this model
+  Model.clear_instance_caches => expires instance-level caches for this model
+  Model.clear_class_caches    => expires class-level caches for this model
+  
+(The <tt>Model.clear_caches</tt> methods are also available on your model instances.)
+
+Alternatively you can pass a <tt>:force => true</tt> option in your <tt>cached_</tt> calls to force a refresh of a particular cache.  For example:
+
+  Album.cached_featured_albums(:force => true)
+  album.cached_top_tracks(:force => true)
+
+== Cached Counts
+
+ARID Cache gives you counts for free.  When a large collection is stored in the cache
+ARID Cache stores the count as well so the next time you want request the count it
+just takes a single read from the cache.  This is also supported for your non-ActiveRecord
+collections if the collection <tt>responds_to?(:count)</tt>.
+
+Given that we have a cache like <tt>album.cached_tracks</tt> we can get the count by calling <tt>album.cached_tracks_count</tt>.
+
+In the case of a non-ActiveRecord collection such as <tt>album.cached_similar_genres</tt> which returns a list like <tt>['Pop', 'Rock', 'Rockabilly']</tt> we can get the cached length of this list with <tt>album.cached_similar_genres_count</tt>.
+
+Sometimes you may want the collection count without loading and caching the collection.  ARID Cache is smart enough that if you only ask for a count - and the collection hasn't already been cached - it will only query for the count.  This is only possible if the return value of your method is a named scope or association proxy (since these are lazy-loaded unlike a call to <tt>find()</tt>).  In the example above if we only ever call <tt>album.cached_tracks_count</tt>, only the count will be cached.  If we subsequently call <tt>album.cached_tracks</tt> the collection will be loaded and the IDs cached as per normal.
+
+Other methods for caching counts are provided for us by virtue of ActiveRecord's built-in methods and named scopes.  For instance, to cache the count for a particular model we can call <tt>Artist.cached_count</tt>.
+
+== Pagination Support and Options to <tt>find</tt>
+
+ARID cache supports pagination using WillPaginate.  The IDs from the cache are paginated in memory and only that page is selected from the database - directly from the target table, without any expensive joins.
+
+You can also use the <tt>:limit</tt> and <tt>:offset</tt> options.  Again, the IDs from the cache are paginated in memory and only the requested records are selected from the database.
+  
+You can pass options like <tt>:include</tt> (or any other valid <tt>find</tt> options) to augment the results of your cached query.  Just because all of the options are supported, does not mean it's a good idea to use them.  Take a look at your logs to see how ARID Cache is interacting with the cache and the database if you don't get the results you expect.
+
+For example, assume we have a named scope 'active' on User which gives the active users.  We can call:
+  
+  User.cached_active.paginate(:page => 1, :include => :preferences, :per_page => 10)
+  User.cached_active(:limit => 10, :offset => 0, :include => :preferences)
+
+(These calls return similar results, except that the first call returns a <tt>WillPaginate::Collection</tt> and the second just returns an <tt>Array</tt>.)
+  
+== Efficiency
+
+* ARID Cache intercepts calls to <tt>cached_</tt> methods using <tt>method_missing</tt> then defines those methods on your models as they are called, so they bypass method missing on subsequent calls.
+* In-memory pagination of cached collections speeds up your queries.  See _Pagination_.
+* If you only request a count ARID Cache will only select the count.  See <i>Cached Counts</i>.
+* If a collection has already been loaded, you get the count for free.  See <i>Cached Counts</i>.
+
 == Examples
 
 ==== Given the following model:
@@ -64,8 +96,9 @@ Then
     named_scope :active, :conditions => [ 'updated_at <= ', 5.minutes.ago ]
   end
 
-==== ARID Cache provides these methods:
+==== ARID Cache supports these methods (and many more):
  
+  User.cached_count
   User.cached_active         # caches the user IDs and the count
   User.cached_active_count   # gets the count for free
 
@@ -114,7 +147,12 @@ Dynamic caches that make use of other cached collections:
     cached_albums(:order => 'release_date DESC', :limit => 3, :include => :artist)
   end
     
-More docs to come...
+== Coming Soon
+
+* Configure your caches on your models (or anywhere else you like) by calling <tt>cache_</tt> methods and passing in options which are applied to all subsequent <tt>cached_</tt> calls on that cache.
+* Pass <tt>:expires_in</tt> options to the cache store to support expiring caches.
+* Support an <tt>:autoexpire => false</tt> option to turn off automatically including the <tt>updated_at</tt> timestamp in the cache key on instance caches.
+* Expanded docs.
   
 == Note on Patches/Pull Requests
 
