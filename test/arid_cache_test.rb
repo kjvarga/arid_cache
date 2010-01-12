@@ -2,8 +2,8 @@ require File.join(File.dirname(__FILE__), 'test_helper')
 
 class AridCacheTest < ActiveSupport::TestCase
   def setup
-    Rails.cache.clear
-    AridCache.store.delete!
+    FileUtils.rm_r(Rails.cache.cache_path) if File.exists?(Rails.cache.cache_path)
+    #AridCache.store.delete!
     get_user
   end
 
@@ -13,9 +13,10 @@ class AridCacheTest < ActiveSupport::TestCase
   end
       
   test "should respond to methods" do
-    assert User.respond_to?(:clear_cache)
-    assert User.first.respond_to?(:clear_cache)    
+    assert User.respond_to?(:clear_caches)
+    assert User.first.respond_to?(:clear_caches)    
     assert_instance_of AridCache::Store, AridCache.store
+    assert_same AridCache::CacheProxy, AridCache.cache
   end
     
   test "should not clobber model methods" do
@@ -128,7 +129,7 @@ class AridCacheTest < ActiveSupport::TestCase
       User.method(:cached_favorite_companies)
     end    
   end
-
+  
   test "applies limit and offset" do
     @user.cached_limit_companies do
       companies
@@ -137,14 +138,15 @@ class AridCacheTest < ActiveSupport::TestCase
     assert_equal 3, @user.cached_limit_companies(:limit => 3).size
     assert_equal @user.companies.all(:limit => 2, :offset => 1), @user.cached_limit_companies(:limit => 2, :offset => 1)
     assert_equal @user.companies.size, @user.cached_limit_companies.size    
+    
+    # Careful of this Rails bug: https://rails.lighthouseapp.com/projects/8994/tickets/1349-named-scope-with-group-by-bug
     User.cached_successful_limit_companies do
-      User.successful
+      User.successful.all
     end
-    raise User.cached_successful_limit_companies.inspect
     assert_equal 2, User.cached_successful_limit_companies(:limit => 2).size
     assert_equal 3, User.cached_successful_limit_companies(:limit => 3).size
     assert_equal User.successful.all(:limit => 2, :offset => 1), User.cached_successful_limit_companies(:limit => 2, :offset => 1)
-    assert_equal User.successful.size, User.cached_successful_limit_companies.size  
+    assert_equal User.successful.all.size, User.cached_successful_limit_companies.size  
   end
   
   test "pagination should not result in an extra query" do
@@ -180,7 +182,7 @@ class AridCacheTest < ActiveSupport::TestCase
     assert_equal one.companies, one.cached_companies
     assert_equal two.companies, two.cached_companies
   end
-
+  
   test "should handle arrays of non-active record instances" do
     assert_equal @user.pet_names, @user.cached_pet_names
     assert_equal @user.pet_names, @user.cached_pet_names
@@ -193,16 +195,53 @@ class AridCacheTest < ActiveSupport::TestCase
     User.cached_companies
     assert Rails.cache.exist?(@user.arid_cache_key('companies'))
     assert Rails.cache.exist?(User.arid_cache_key('companies'))
-    User.clear_cache
-    assert Rails.cache.exist?(@user.arid_cache_key('companies'))
-    assert Rails.cache.exist?(User.arid_cache_key('companies'))   
+    User.clear_caches
+    assert !Rails.cache.exist?(@user.arid_cache_key('companies'))
+    assert !Rails.cache.exist?(User.arid_cache_key('companies'))   
   end
-      
+  
+  test "should support expiring caches" do
+    # The first query should put the count in the cache.  The second query
+    # should read the count from the cache.  The third query should
+    # reload the cache.
+    assert_queries(2) do
+      User.cached_companies_count(:expires_in => 1.second)
+      User.cached_companies_count(:expires_in => 1.second)
+      sleep(1)
+      User.cached_companies_count(:expires_in => 1.second)
+    end
+  end
+  
+  test "should support an auto-expire option" do
+    assert_match %r[users/#{@user.id}-companies], @user.arid_cache_key('companies')
+    assert_equal @user.arid_cache_key('companies'), @user.arid_cache_key('companies', :auto_expire => false)
+    assert_match %r[users/#{@user.id}-\d{14}-companies], @user.arid_cache_key('companies', :auto_expire => true)
+    
+    # It doesn't apply to class caches, but shouldn't affect it either
+    assert_equal User.arid_cache_key('companies'), User.arid_cache_key('companies', :auto_expire => true)
+  end
+  
+  test "should turn off auto-expire by default" do
+    assert_queries(2) do
+      @user.cached_companies_count
+      @user.touch
+      @user.cached_companies_count
+    end
+  end
+  
+  test "should reload auto-expired caches" do
+    assert_queries(3) do
+      @user.cached_companies_count(:auto_expire => true)
+      @user.update_attribute(:updated_at, Time.now + 1.second)
+      @user.cached_companies_count(:auto_expire => true)
+      @user.cached_companies_count(:auto_expire => true)
+    end
+  end
+            
   protected
 
     def get_user
       @user = User.first
-      @user.clear_cache
       define_instance_cache(@user)
       @user
     end

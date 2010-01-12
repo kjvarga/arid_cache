@@ -13,13 +13,12 @@ ActiveRecord::Base.silence do
   load(File.join(File.dirname(__FILE__), 'schema.rb'))
 end
 
-# Fixtures
-ActiveRecord::Base.silence do
-  Fixtures.create_fixtures(File.join(File.dirname(__FILE__), '..', 'fixtures'), ActiveRecord::Base.connection.tables)
-end
-
 # Models
 Dir[File.join(File.dirname(__FILE__), '..', 'models', '*.rb')].each { |f| require f }
+
+# Populate
+require 'blueprint'
+Blueprint.seeds
 
 class << ActiveRecord::Base.connection
   IGNORED_SQL = [/^PRAGMA/, /^SELECT currval/, /^SELECT CAST/, /^SELECT @@IDENTITY/, /^SELECT @@ROWCOUNT/, /^SHOW FIELDS /]

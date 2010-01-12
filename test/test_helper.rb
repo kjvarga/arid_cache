@@ -1,6 +1,8 @@
 $LOAD_PATH.unshift(File.dirname(__FILE__))
-$LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'lib'))
+$LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'lib')) # AridCache lib
+$LOAD_PATH.unshift(File.join(File.dirname(__FILE__), 'lib'))       # test lib
 
+require 'fileutils'
 require 'rubygems'
 require 'active_record'
 require 'active_support'
@@ -8,6 +10,9 @@ require 'active_support/test_case'
 require 'test/unit' # required by ActiveSupport::TestCase
 require 'will_paginate'
 require 'ruby-debug'
+
+# Add support for expiring file-cache store.
+require 'active_support/cache/file_store_extras'
 
 # Activate ARID Cache
 require 'arid_cache'
@@ -17,8 +22,9 @@ AridCache.init_rails
 log = File.expand_path(File.join(File.dirname(__FILE__), 'log', 'test.log'))
 RAILS_DEFAULT_LOGGER = ENV["STDOUT"] ? Logger.new(STDOUT) : Logger.new(log)
 
-# Setup an in memory-cache
-RAILS_CACHE = ActiveSupport::Cache.lookup_store(:memory_store)
+# Setup the cache. Use the file-store cache because the
+# memory-store cache doesn't delete cache keys...I don't know why.
+RAILS_CACHE = ActiveSupport::Cache.lookup_store(:file_store, "#{File.dirname(__FILE__)}/tmp/cache")
 
 # Mock Rails
 Rails = Class.new do

@@ -2,6 +2,7 @@ ActiveRecord::Schema.define do
   create_table "users", :force => true do |t|
     t.column "name",  :text
     t.column "email", :text
+    t.timestamps
   end
   
   create_table "companies", :force => true do |t|
@@ -9,5 +10,6 @@ ActiveRecord::Schema.define do
     t.column "owner_id", :integer
     t.column "country_id", :integer
     t.column "employees", :integer    
+    t.timestamps
   end
 end

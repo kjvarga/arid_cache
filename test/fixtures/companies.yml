@@ -1,6 +1,0 @@
-<% for digit in 1..15 %>
-acme_<%= digit %>:
-  name: Acme <%= digit %>
-  owner_id: <%= rand(10) %>
-  employees: <%= rand(200) %>
-<% end %>

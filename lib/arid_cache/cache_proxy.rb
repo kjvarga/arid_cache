@@ -1,6 +1,6 @@
 module AridCache
   class CacheProxy
-    attr_accessor :object, :key, :opts, :blueprint, :cached, :cache_key, :block, :records
+    attr_accessor :object, :key, :opts, :blueprint, :cached, :cache_key, :block, :records, :combined_options
     
     # AridCache::CacheProxy::Result
     #
@@ -25,7 +25,11 @@ module AridCache
       end
     end
 
-    def self.clear_all_caches
+    #
+    # Managing your caches
+    # 
+    
+    def self.clear_caches
       Rails.cache.delete_matched(%r[arid-cache-.*])
     end 
     
@@ -37,12 +41,12 @@ module AridCache
     def self.clear_instance_caches(object)
       key = (object.is_a?(Class) ? object : object.class).name.pluralize.downcase
       Rails.cache.delete_matched(%r[arid-cache-#{key}.*])
-    end    
-    
-    def self.has?(object, key)
-      Rails.cache.exist?(object.arid_cache_key(key))
     end
 
+    #
+    # Fetching results
+    #
+    
     def self.fetch_count(object, key, opts, &block)
       CacheProxy.new(object, key, opts, &block).fetch_count
     end
@@ -54,16 +58,20 @@ module AridCache
     def initialize(object, key, opts, &block)
       self.object = object
       self.key = key
-      self.opts = opts || {}
+      self.opts = opts.symbolize_keys || {}
       self.blueprint = AridCache.store.find(object, key)
-      self.cache_key = object.arid_cache_key(key)
-      self.cached = Rails.cache.read(cache_key)
       self.block = block
       self.records = nil
+      
+      # The options from the blueprint merged with the options for this call
+      self.combined_options = self.blueprint.nil? ? self.opts : self.blueprint.opts.merge(self.opts)
+      
+      self.cache_key = object.arid_cache_key(key, opts_for_cache_key)
+      self.cached = Rails.cache.read(cache_key, opts_for_cache)
     end
             
     def fetch_count
-      if cached.nil? || opts[:force]
+      if refresh_cache?
         execute_count
       elsif cached.is_a?(AridCache::CacheProxy::Result)
         cached.has_count? ? cached.count : execute_count
@@ -77,7 +85,7 @@ module AridCache
     end
           
     def fetch
-      if cached.nil? || opts[:force]
+      if refresh_cache?
         execute_find
       elsif cached.is_a?(AridCache::CacheProxy::Result)
         if cached.has_ids? # paginate and fetch here
@@ -97,6 +105,10 @@ module AridCache
       
     private
 
+      def refresh_cache?
+        cached.nil? || opts[:force]
+      end
+      
       def get_records
         block = block || blueprint.proc
         self.records = block.nil? ? object.instance_eval(key) : object.instance_eval(&block)
@@ -119,7 +131,7 @@ module AridCache
             cached.klass = object_base_class
           end
         end
-        Rails.cache.write(cache_key, cached)
+        Rails.cache.write(cache_key, cached, opts_for_cache)
         
         self.cached = cached
         return_records(records)
@@ -180,24 +192,34 @@ module AridCache
           cached = records # some base type, cache it as itself
         end
         
-        Rails.cache.write(cache_key, cached)
+        Rails.cache.write(cache_key, cached, opts_for_cache)
         self.cached = cached
         cached.respond_to?(:count) ? cached.count : cached
       end
-                  
+      
+      # Pass all the options to paginate, including the total count
       def opts_for_paginate
-        paginate_opts = blueprint.nil? ? opts.symbolize_keys : blueprint.opts.merge(opts.symbolize_keys)
-        paginate_opts[:total_entries] = cached.count
-        paginate_opts
+        combined_options.merge({ :total_entries => cached.count })
       end
     
-      VALID_FIND_OPTIONS = [ :conditions, :include, :joins, :limit, :offset, :order, :select, :readonly, :group, :having, :from, :lock ]
+      OPTIONS_FOR_FIND = [ :conditions, :include, :joins, :limit, :offset, :order, :select, :readonly, :group, :having, :from, :lock ]
       
       def opts_for_find
-        find_opts = blueprint.nil? ? opts.symbolize_keys : blueprint.opts.merge(opts.symbolize_keys) 
-        find_opts.delete_if { |k,v| !VALID_FIND_OPTIONS.include?(k) }
+        combined_options.reject { |k,v| !OPTIONS_FOR_FIND.include?(k) }
       end
       
+      OPTIONS_FOR_CACHE = [ :expires_in ]
+      
+      def opts_for_cache
+        combined_options.reject { |k,v| !OPTIONS_FOR_CACHE.include?(k) }
+      end
+
+      OPTIONS_FOR_CACHE_KEY = [ :auto_expire ]
+      
+      def opts_for_cache_key
+        combined_options.reject { |k,v| !OPTIONS_FOR_CACHE_KEY.include?(k) }
+      end
+            
       def object_base_class
         object.is_a?(Class) ? object : object.class
       end

@@ -3,7 +3,7 @@ require 'arid_cache'
 class User < ActiveRecord::Base
   has_many :companies, :foreign_key => :owner_id
   named_scope :companies, :joins => :companies
-  named_scope :successful, :joins => :companies, :conditions => 'companies.employees > 50'
+  named_scope :successful, :joins => :companies, :conditions => 'companies.employees > 50', :group => 'users.id'
   
   def big_companies
     companies.find :all, :conditions => [ 'employees > 20' ]
