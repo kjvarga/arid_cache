@@ -14,7 +14,7 @@ require 'ruby-debug'
 # Add support for expiring file-cache store.
 require 'active_support/cache/file_store_extras'
 
-# Activate ARID Cache
+# Activate AridCache
 require 'arid_cache'
 AridCache.init_rails
 

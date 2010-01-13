@@ -20,4 +20,12 @@ class User < ActiveRecord::Base
       super
     end
   end
+  
+  def respond_to?(method)
+    if method == :respond_not_overridden
+      true
+    else
+      super
+    end
+  end
 end

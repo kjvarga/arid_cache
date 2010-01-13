@@ -37,7 +37,7 @@ module AridCache
     base.send(:include, AridCache::ActiveRecord)
   end
   
-  # Initializes ARID Cache for Rails.
+  # Initializes AridCache for Rails.
   #
   # This method is called by `init.rb`,
   # which is run by Rails on startup.

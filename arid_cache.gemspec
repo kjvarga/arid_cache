@@ -10,8 +10,8 @@ Gem::Specification.new do |s|
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Karl Varga"]
   s.date = %q{2009-12-25}
-  s.description = %q{ARID Cache makes caching easy and effective.  ARID cache supports caching on all your model named scopes, class methods and instance methods right out of the box.  ARID cache prevents caching logic from cluttering your models and clarifies your logic by making explicit calls to cached result sets.
-ARID Cache is designed for handling large, expensive ActiveRecord collections but is equally useful for caching anything else as well.
+  s.description = %q{AridCache makes caching easy and effective.  AridCache supports caching on all your model named scopes, class methods and instance methods right out of the box.  AridCache prevents caching logic from cluttering your models and clarifies your logic by making explicit calls to cached result sets.
+AridCache is designed for handling large, expensive ActiveRecord collections but is equally useful for caching anything else as well.
 }
   s.email = %q{kjvarga@gmail.com}
   s.extra_rdoc_files = [

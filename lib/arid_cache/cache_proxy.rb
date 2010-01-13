@@ -110,7 +110,7 @@ module AridCache
       end
       
       def get_records
-        block = block || blueprint.proc
+        block = block || (blueprint && blueprint.proc)
         self.records = block.nil? ? object.instance_eval(key) : object.instance_eval(&block)
       end
       

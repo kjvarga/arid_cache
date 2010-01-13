@@ -3,8 +3,7 @@ require File.join(File.dirname(__FILE__), 'test_helper')
 class AridCacheTest < ActiveSupport::TestCase
   def setup
     FileUtils.rm_r(Rails.cache.cache_path) if File.exists?(Rails.cache.cache_path)
-    #AridCache.store.delete!
-    get_user
+    @user = User.first
   end
 
   test "initializes needed objects" do
@@ -14,36 +13,27 @@ class AridCacheTest < ActiveSupport::TestCase
       
   test "should respond to methods" do
     assert User.respond_to?(:clear_caches)
-    assert User.first.respond_to?(:clear_caches)    
+    assert @user.respond_to?(:clear_caches)    
     assert_instance_of AridCache::Store, AridCache.store
     assert_same AridCache::CacheProxy, AridCache.cache
   end
     
   test "should not clobber model methods" do
-    assert_respond_to User.first, :name
+    assert_respond_to @user, :name
     assert_respond_to Company.first, :name
-    assert_nothing_raised { User.first.name }
+    assert_nothing_raised { @user.name }
     assert_nothing_raised { Company.first.name }
-    
-    # Shouldn't mess with your model's method_missing
-    assert_nothing_raised { User.first.is_high? }
-    assert User.first.is_high?  
-  end
-    
-  test "should allow me to cache on the model" do
-    assert_nothing_raised do
-      define_model_cache(User)
-    end
-    #assert_instance_of(Proc, AridCache.store[User.arid_cache_key('companies')].proc)
   end
   
-  test "should allow me to cache on the instance" do
-    assert_nothing_raised do
-      define_instance_cache(@user)
-    end
-    #assert_instance_of(Proc, AridCache.store[AridCache.store.store_key@user.arid_cache_key('companies')].proc)
+  test "should not clobber method_missing" do
+    assert_nothing_raised { @user.is_high? }
+    assert @user.is_high?  
   end
-    
+     
+  test "should not clobber respond_to?" do
+    assert @user.respond_to?(:respond_not_overridden)
+  end
+     
   test "should raise an error on invalid dynamic caches" do
     assert_raises ArgumentError do
       @user.cached_invalid_companies
@@ -52,7 +42,6 @@ class AridCacheTest < ActiveSupport::TestCase
   
   test "should create dynamic caches given valid arguments" do
     assert_nothing_raised { @user.cached_companies }
-    #assert_instance_of(Proc, AridCache.store[@user.arid_cache_key('companies')].proc)
   end
   
   test "counts queries correctly" do
@@ -119,17 +108,6 @@ class AridCacheTest < ActiveSupport::TestCase
     end
   end
   
-  test "calling cache_ defines methods on the object" do
-    assert !User.method_defined?(:cached_favorite_companies)
-    User.cache_favorite_companies(:order => 'name DESC') do
-      User.companies
-    end
-    assert User.respond_to?(:cached_favorite_companies)
-    assert_nothing_raised do
-      User.method(:cached_favorite_companies)
-    end    
-  end
-  
   test "applies limit and offset" do
     @user.cached_limit_companies do
       companies
@@ -190,7 +168,6 @@ class AridCacheTest < ActiveSupport::TestCase
   end
              
   test "should empty the Rails cache" do
-    define_model_cache(User)
     @user.cached_companies
     User.cached_companies
     assert Rails.cache.exist?(@user.arid_cache_key('companies'))
@@ -230,22 +207,67 @@ class AridCacheTest < ActiveSupport::TestCase
   end
   
   test "should reload auto-expired caches" do
-    assert_queries(3) do
+    assert_queries(2) do
       @user.cached_companies_count(:auto_expire => true)
-      @user.update_attribute(:updated_at, Time.now + 1.second)
+      @user.cached_companies_count(:auto_expire => true)
+      @user.updated_at = Time.now + 1.seconds
       @user.cached_companies_count(:auto_expire => true)
       @user.cached_companies_count(:auto_expire => true)
     end
   end
-            
+        
+  test "should support configuring instance caches" do
+    User.instance_caches { best_companies { companies } }
+    assert_equal @user.companies, @user.cached_best_companies
+  end
+  
+  test "instance caches should work on all instances of the class" do
+    User.instance_caches { best_companies { companies } }
+    assert_equal @user.cached_best_companies, User.first.cached_best_companies
+  end
+  
+  test "should support configuring class caches" do
+    User.class_caches { successful_users { successful } }
+    assert_equal User.successful, User.cached_successful_users
+  end
+  
+  test "should create valid store keys" do
+    assert_equal 'user-key', AridCache.store.send(:class_store_key, User, 'key')
+    assert_equal 'users-key', AridCache.store.send(:instance_store_key, User, 'key')
+    assert_equal AridCache.store.send(:instance_store_key, User, 'key'), AridCache.store.send(:object_store_key, @user, 'key')
+    assert_equal AridCache.store.send(:class_store_key, User, 'key'), AridCache.store.send(:object_store_key, User, 'key')
+  end
+
+  test "configuring caches should not perform any queries" do
+    User.instance_caches do
+      best_companies { companies }
+    end
+    User.class_caches do
+      best_companies(:order => 'name DESC') { companies.find(:all, :order => 'name DESC') }
+    end
+  end
+  
+  test "should support options in the cache configuration" do
+    User.instance_caches(:auto_expire => true) do
+      best_companies(:expires_in => 1.second) { companies }
+    end
+    assert_queries(2) do
+      @user.cached_best_companies_count
+      @user.updated_at = Time.now + 1.seconds
+      @user.cached_best_companies_count
+      @user.cached_best_companies_count
+    end
+    User.class_caches do
+      most_successful(:order => 'name DESC') { successful.find(:all, :order => 'name DESC') }
+    end
+    # Call it twice to ensure that on the second call the order is applied when retrieving the
+    # records by id
+    assert_equal User.successful.find(:all, :order => 'name DESC'), User.cached_most_successful
+    assert_equal User.successful.find(:all, :order => 'name DESC'), User.cached_most_successful   
+  end
+  
   protected
 
-    def get_user
-      @user = User.first
-      define_instance_cache(@user)
-      @user
-    end
-    
     def assert_queries(num = 1)
       $query_count = 0
       yield
@@ -256,16 +278,4 @@ class AridCacheTest < ActiveSupport::TestCase
     def assert_no_queries(&block)
       assert_queries(0, &block)
     end
-  
-    def define_instance_cache(user)
-      user.cache_companies(:per_page => 2) do
-        user.companies
-      end    
-    end 
-
-    def define_model_cache(model)
-      model.cache_companies(:per_page => 2) do
-        model.companies
-      end    
-    end 
 end

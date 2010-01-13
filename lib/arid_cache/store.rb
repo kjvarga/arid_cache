@@ -1,22 +1,21 @@
 module AridCache
   class Store < Hash
-    extend ActiveSupport::Memoizable
     
     # AridCache::Store::Blueprint
     #
     # Stores options and blocks that are used to generate results for finds
     # and counts.
-    Blueprint = Struct.new(:key, :klass, :proc, :opts)  do
+    Blueprint = Struct.new(:klass, :key, :opts, :proc)  do
 
-      def initialize(key, klass, proc=nil, opts={})
+      def initialize(klass, key, opts={}, proc=nil)
         self.key = key
         self.klass = klass
         self.proc = proc
         self.opts = opts
       end
             
-      def klass=(value) # store the base class of *value*
-        self['klass'] = value.is_a?(Class) ? value.name : value.class.name
+      def klass=(object) # store the class name only
+        self['klass'] = object.is_a?(Class) ? object.name : object.class.name
       end
       
       def klass
@@ -40,6 +39,35 @@ module AridCache
       end 
     end
     
+    #
+    # Capture cache configurations and blocks and store them in the store.
+    #
+    # A block is evaluated within the scope of this class.  The blocks
+    # contains calls to methods which define the caches and give options
+    # for each cache. 
+    #
+    # Don't instantiate directly.  Rather instantiate the Instance- or 
+    # ClassCacheConfiguration.
+    Configuration = Struct.new(:klass, :global_opts)  do
+
+      def initialize(klass, global_opts={})
+        self.global_opts = global_opts
+        self.klass = klass
+      end
+      
+      def method_missing(key, *args, &block)
+        opts = global_opts.merge(args.empty? ? {} : args.first)
+        case self
+        when InstanceCacheConfiguration
+          AridCache.store.add_instance_cache_configuration(klass, key, opts, block)
+        else
+          AridCache.store.add_class_cache_configuration(klass, key, opts, block)
+        end
+      end
+    end
+    class InstanceCacheConfiguration < Configuration; end
+    class ClassCacheConfiguration    < Configuration; end
+    
     def has?(object, key)
       self.include?(object_store_key(object, key))
     end
@@ -57,17 +85,27 @@ module AridCache
       self[object_store_key(object, key)]
     end
     
-    def add(object, key, proc, opts)
-      store_key = object_store_key(object, key)
-      self[store_key] = AridCache::Store::Blueprint.new(key, object, proc, opts)
+    def add_instance_cache_configuration(klass, key, opts, proc)
+      store_key = instance_store_key(klass, key)
+      self[store_key] = AridCache::Store::Blueprint.new(klass, key, opts, proc)
     end
-    
+
+    def add_class_cache_configuration(klass, key, opts, proc)
+      store_key = class_store_key(klass, key)
+      self[store_key] = AridCache::Store::Blueprint.new(klass, key, opts, proc)
+    end
+
+    def add_object_cache_configuration(object, key, opts, proc)
+      store_key = object_store_key(object, key)
+      self[store_key] = AridCache::Store::Blueprint.new(object, key, opts, proc)
+    end
+            
     def find_or_create(object, key)
       store_key = object_store_key(object, key)
       if self.include?(store_key)
         self[store_key]
       else
-        self[store_key] = AridCache::Store::Blueprint.new(key, object)
+        self[store_key] = AridCache::Store::Blueprint.new(object, key)
       end
     end
     
@@ -76,9 +114,10 @@ module AridCache
     def initialize
     end
     
+    def class_store_key(klass, key);    klass.name.downcase + '-' + key.to_s; end
+    def instance_store_key(klass, key); klass.name.downcase.pluralize + '-' + key.to_s; end
     def object_store_key(object, key)
-      (object.is_a?(Class) ? object.name.downcase : object.class.name.pluralize.downcase) + '-' + key.to_s
+      case object; when Class; class_store_key(object, key); else; instance_store_key(object.class, key); end
     end
-    memoize :object_store_key
   end 
 end
