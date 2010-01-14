@@ -17,7 +17,7 @@ module AridCache
       end
             
       def klass=(value)
-        self['klass'] = value.is_a?(Class) ? value.name : value
+        self['klass'] = value.is_a?(Class) ? value.name : value.class.name
       end
       
       def klass
@@ -89,12 +89,24 @@ module AridCache
         execute_find
       elsif cached.is_a?(AridCache::CacheProxy::Result)
         if cached.has_ids?
-          klass = find_class_of_results
-          if opts.include?(:page) # paginate array of ids in memory
-            paged_ids = cached.ids.paginate(opts_for_paginate(klass))
-            paged_ids.replace(klass.find(paged_ids, preserve_order(opts_for_find, paged_ids)))
+          klass = cached.klass || object_base_class
+          if combined_options.include?(:page)    
+            if combined_options.include?(:order) # order and paginate in the database
+              klass.paginate(cached.ids, opts_for_find.merge(opts_for_paginate(klass)))
+            else # paginate in memory
+              paged_ids = cached.ids.paginate(opts_for_paginate(klass))
+              paged_ids.replace(klass.find(paged_ids, preserve_order(opts_for_find, paged_ids)))
+            end
+          elsif combined_options.include?(:limit) || combined_options.include?(:offset)
+            if combined_options.include?(:order) # limit and offset in the database
+              klass.find(cached.ids, opts_for_find)
+            else # limit and offset in memory
+              offset, limit = combined_options.delete(:offset) || 0, combined_options.delete(:limit) || cached.count
+              ids = cached.ids[offset, limit]
+              klass.find(ids, preserve_order(opts_for_find, ids))
+            end
           else
-            klass.find(cached.ids, preserve_order(opts_for_find, cached.ids))
+            klass.find(cached.ids, opts_for_find)
           end
         else
           execute_find
@@ -228,10 +240,6 @@ module AridCache
             
       def object_base_class
         object.is_a?(Class) ? object : object.class
-      end
-      
-      def find_class_of_results
-        opts[:class] || (blueprint && blueprint.opts[:class]) || cached.klass || object_base_class
       end
 
       # Preserve the original order of the results if no :order option is specified.

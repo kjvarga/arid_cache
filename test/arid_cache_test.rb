@@ -55,7 +55,7 @@ class AridCacheTest < ActiveSupport::TestCase
   end
   
   test "paginates results" do
-    results = @user.cached_companies(:page => 1, :per_page => 3)
+    results = @user.cached_companies(:page => 1, :per_page => 3, :order => 'name desc')
     assert_kind_of WillPaginate::Collection, results
     assert_equal 3, results.size
     assert_equal @user.companies.count, results.total_entries
@@ -102,11 +102,25 @@ class AridCacheTest < ActiveSupport::TestCase
   end
   
   test "applies limit and offset" do
-    @user.cached_limit_companies do
+    result = @user.cached_limit_companies do
       companies
     end
-    assert_equal 2, @user.cached_limit_companies(:limit => 2).size
-    assert_equal 3, @user.cached_limit_companies(:limit => 3).size
+    limit_two_result = @user.cached_limit_companies(:limit => 2)
+    assert_equal 2, limit_two_result.size
+    assert_equal result[0, 2], limit_two_result
+    
+    limit_three_result = @user.cached_limit_companies(:limit => 3)
+    assert_equal 3, limit_three_result.size
+    assert_equal result[0, 3], limit_three_result
+  
+    limit_two_offset_one_result = @user.cached_limit_companies(:limit => 2, :offset => 1)
+    assert_equal 2, limit_two_offset_one_result.size
+    assert_equal result[1, 2], limit_two_offset_one_result
+    
+    offset_one_result = @user.cached_limit_companies(:offset => 1)
+    assert_equal result.size-1, offset_one_result.size
+    assert_equal result[1, result.size], offset_one_result
+            
     assert_equal @user.companies.all(:limit => 2, :offset => 1), @user.cached_limit_companies(:limit => 2, :offset => 1)
     assert_equal @user.companies.size, @user.cached_limit_companies.size    
     
@@ -120,6 +134,24 @@ class AridCacheTest < ActiveSupport::TestCase
     assert_equal User.successful.all.size, User.cached_successful_limit_companies.size  
   end
   
+  test "should requery the database for limits with order" do
+    @user.cached_companies # prime the cache
+    assert_equal @user.companies.find(:all, :limit => 3, :order => 'name DESC'), @user.cached_companies(:limit => 3, :order => 'name DESC')
+    assert_equal @user.companies.find(:all, :limit => 3, :order => 'name ASC'), @user.cached_companies(:limit => 3, :order => 'name ASC')
+  end
+  
+  test "should activate will paginate" do
+    assert_nothing_raised do
+      User.paginate(:page => 1)
+    end
+  end
+  
+  test "should requery the database for paginate with order" do
+    @user.cached_companies # prime the cache
+    assert_equal @user.companies.paginate(:page => 1, :per_page => 3, :order => 'name DESC'), @user.cached_companies(:page => 1, :per_page => 3, :order => 'name DESC')
+    assert_equal @user.companies.paginate(:page => 1, :per_page => 3, :order => 'name ASC'), @user.cached_companies(:page => 1, :per_page => 3, :order => 'name ASC')
+  end
+    
   test "pagination should not result in an extra query" do
     assert_queries(1) do
       @user.cached_big_companies(:page => 1)
@@ -272,7 +304,7 @@ class AridCacheTest < ActiveSupport::TestCase
     @user.cached_companies
     @user.cached_companies
   end
-
+  
   test "should paginate collections in memory" do
     # TODO.  Tough to test because we can't just count queries
     # have to look at the SQL in the logs for this one.
