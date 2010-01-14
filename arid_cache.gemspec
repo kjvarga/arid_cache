@@ -5,11 +5,11 @@
 
 Gem::Specification.new do |s|
   s.name = %q{arid_cache}
-  s.version = "0.1.1"
+  s.version = "0.2.1"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Karl Varga"]
-  s.date = %q{2009-12-25}
+  s.date = %q{2010-01-15}
   s.description = %q{AridCache makes caching easy and effective.  AridCache supports caching on all your model named scopes, class methods and instance methods right out of the box.  AridCache prevents caching logic from cluttering your models and clarifies your logic by making explicit calls to cached result sets.
 AridCache is designed for handling large, expensive ActiveRecord collections but is equally useful for caching anything else as well.
 }
@@ -40,8 +40,8 @@ AridCache is designed for handling large, expensive ActiveRecord collections but
      "test/console",
      "test/db/prepare.rb",
      "test/db/schema.rb",
-     "test/fixtures/companies.yml",
-     "test/fixtures/users.yml",
+     "test/lib/active_support/cache/file_store_extras.rb",
+     "test/lib/blueprint.rb",
      "test/log/.gitignore",
      "test/models/company.rb",
      "test/models/user.rb",
@@ -58,6 +58,8 @@ AridCache is designed for handling large, expensive ActiveRecord collections but
      "test/arid_cache_test.rb",
      "test/db/prepare.rb",
      "test/db/schema.rb",
+     "test/lib/active_support/cache/file_store_extras.rb",
+     "test/lib/blueprint.rb",
      "test/models/company.rb",
      "test/models/user.rb",
      "test/test_helper.rb"
@@ -69,17 +71,23 @@ AridCache is designed for handling large, expensive ActiveRecord collections but
 
     if Gem::Version.new(Gem::RubyGemsVersion) >= Gem::Version.new('1.2.0') then
       s.add_runtime_dependency(%q<will_paginate>, [">= 0"])
-      s.add_development_dependency(%q<rspec>, [">= 1.2.9"])
       s.add_development_dependency(%q<will_paginate>, [">= 0"])
+      s.add_development_dependency(%q<sham>, [">= 0"])
+      s.add_development_dependency(%q<faker>, [">= 0"])
+      s.add_development_dependency(%q<machinist>, [">= 0"])
     else
       s.add_dependency(%q<will_paginate>, [">= 0"])
-      s.add_dependency(%q<rspec>, [">= 1.2.9"])
       s.add_dependency(%q<will_paginate>, [">= 0"])
+      s.add_dependency(%q<sham>, [">= 0"])
+      s.add_dependency(%q<faker>, [">= 0"])
+      s.add_dependency(%q<machinist>, [">= 0"])
     end
   else
     s.add_dependency(%q<will_paginate>, [">= 0"])
-    s.add_dependency(%q<rspec>, [">= 1.2.9"])
     s.add_dependency(%q<will_paginate>, [">= 0"])
+    s.add_dependency(%q<sham>, [">= 0"])
+    s.add_dependency(%q<faker>, [">= 0"])
+    s.add_dependency(%q<machinist>, [">= 0"])
   end
 end
 
