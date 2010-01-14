@@ -216,7 +216,9 @@ Other methods for caching counts are provided for us by virtue of ActiveRecord's
 
 === Pagination
 
-AridCache supports pagination using WillPaginate.  The IDs from the cache are paginated in memory and only that page is selected from the database - directly from the target table, which is extremely fast.  Another advantage is that we already have the size of the collection in the cache so not query is required to set the <tt>:total_entries</tt> on the <tt>WillPaginate::Collection</tt>.
+AridCache supports pagination using WillPaginate.  If you are not changing the order of the cached collection the IDs are paginated in memory and only that page is selected from the database - directly from the target table, which is extremely fast.
+
+An advantage of using AridCache is that since we already have the size of the collection in the cache no query is required to set the <tt>:total_entries</tt> on the <tt>WillPaginate::Collection</tt>.
 
 To paginate just pass a <tt>:page</tt> option in your call to <tt>cached_</tt>.  If you don't pass a value for <tt>:per_page</tt> AridCache gets the value from <tt>Model.per_page</tt>.
 
@@ -226,21 +228,20 @@ Some examples of pagination:
   User.cached_active(:page => 2)                  # uses User.per_page 
   user.cached_pets(:page => 1)                    # uses Pet.per_page
 
-(Note that because the IDs are paginated in memory you cannot change the order of the collection while paginating.)
+If you want to paginate using a different ordering, pass an <tt>:order</tt> option.  Because the order is being changed AridCache cannot paginate in memory.  Instead, the cached IDs are passed to your <tt>Model.paginate</tt> method along with any other options and the database will order the collection and apply limits etc.
 
+For example, the following queries will work:
+
+  user.cached_companies(:page => 1, :per_page => 3, :order => 'name DESC')
+  user.cached_companies(:page => 1, :per_page => 3, :order => 'name ASC')
+  
 === Limit & Offset
 
-You can also use the <tt>:limit</tt> and <tt>:offset</tt> options.  These work slightly differently to pagination in that the IDs are not limited or offset in memory, but rather these options are applied to the whole collection in a regular call to <tt>find</tt>.
-
-The thinking here is that we often want to get a subset of a cached collection, and this often requires applying some kind of (different) ordering to the collection as a whole.  For example, we may have cached a genre's tracks and now we want the top 10 tracks.
-
-  genre.cached_tracks(:order => 'name ASC')
-  genre.cached_top_ten_tracks { cached_tracks(:limit => 10, :order => 'popularity DESC') }
-
-Another example:
+You apply <tt>:limit</tt> and <tt>:offset</tt> options in a similar manner to the <tt>:page</tt> and <tt>:per_page</tt> options.  The limit and offset will be applied in memory and only the resulting subset selected from the target table - unless you specify a new order.
 
   user.cached_pets(:limit => 2, :include => :toys)
   user.cached_pets(:limit => 2, :offset => 3, :include => :toys)
+  genre.cached_top_ten_tracks { cached_tracks(:limit => 10, :order => 'popularity DESC') }
   
 === Other Options to <tt>find</tt>
   
