@@ -129,9 +129,7 @@ You can configure your caches in this manner wherever you want, but I think the 
     ...
   end
 
-==  Cache Keys & Managing your Caches
-
-=== Cache Keys
+== Cache Keys
 
 AridCache cache keys are defined based on the methods you call to interact with the cache.  For example:
 
