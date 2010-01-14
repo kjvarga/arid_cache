@@ -18,21 +18,41 @@ Then
 
 (Requires having GemCutter in your gem sources.)
 
-== Why AridCache?
+== Introduction
 
 The name AridCache comes from <b>A</b>ctive<b>R</b>ecord *ID* Cache.  It's also very DRY...get it? :)
 
-== Defining Caches
+Out of the box AridCache supports caching on all your ActiveRecord class and instance methods and named scopes...basically if a class or class instance <tt>respond_to?</tt> something, you can cache it.
 
-Out of the box AridCache supports caching on all your ActiveRecord class and instance methods and named scopes...basically if a class or class instance <tt>respond_to?</tt> something, you can cache it. You can also define caches that use compositions of methods or named scopes for those cases when you don't want to add a new method to your class.
+The way you interact with the cache via your model methods is to prepend the method call with <tt>cached_</tt>.  The part of the method call after <tt>cached_</tt> serves as the basis for the cache key.  For example,
 
-==== Cached results
+  User.cached_count            # cache key is arid-cache-user-count
+  genre.cached_top_ten_tracks  # cache key is arid-cache-genres/<id>-top_ten_tracks
+  
+You can also define caches that use compositions of methods or named scopes, or other complex queries, without having to add a new method to your class.  This way you can also create different caches that all use the same method.  For example,
 
-* If the result of your <tt>cached_</tt> call is an array of ActiveRecord records, AridCache only stores the IDs in the cache, because it's a bad idea to store records in the cache.  Arrays of other types are stored as-is so you can still cache arrays of strings and other types.
+  # cache key is arid-cache-user-most_active_users
+  User.cached_most_active_users do
+    active.find(:order => 'activity DESC', :limit => 5)
+  end
 
-On subsequent calls we call <tt>find</tt> on the target class passing in the ActiveRecord IDs that were stored in the cache. One implication is that an <tt>:order</tt> clause that ordered the initial results isn't applied on subsequent calls, so it's a good idea to always include an <tt>:order</tt> option when calling <tt>cached_</tt>.  This is also true for options like <tt>:include</tt>.  It means theres some duplication of query options, but I don't know if that can be avoided.
+=== ActiveRecord Collections
 
-* Everything else is cached and returned as-is.
+If the result of your <tt>cached_</tt> call is an array of ActiveRecords, AridCache only stores the IDs in the cache (because it's a bad idea to store records in the cache).
+
+On subsequent calls we call <tt>find</tt> on the target class passing in the ActiveRecord IDs that were stored in the cache.  AridCache will preserve the original ordering of your collection (you can change this using the <tt>:order</tt>).
+
+The idea here is to cache collections that are expensive to query.  Once the cache is loaded, retrieving the cached records from the database simply involves a <tt>SELECT * FROM table WHERE id IN (ids, ...)</tt>.
+
+Consider how long it would take to get the top 10 favorited tracks of all time from a database with a million tracks and 100,000 users.  Now compare that to selecting 10 tracks by ID from the track table.  The performance gain is huge.
+
+=== Base Types and Other Collections
+
+Arrays of non-ActiveRecords are stored as-is so you can cache arrays of strings and other types without problems.
+
+Any other objects (including single ActiveRecord objects) are cached and returned as-is.
+
+=== Example
 
 An example of caching using existing methods on your class:
 
@@ -48,8 +68,10 @@ An example of caching using existing methods on your class:
 
   user.cached_pets_count     # only selects the count until the collection is requested
   user.cached_pets           # loads the collection and stores the pets IDs in the cache
-  
-==== Dynamically defining caches
+
+== Defining Your Caches
+
+=== Dynamically
 
 To dynamically define caches just pass a block to your <tt>cached_</tt> calls.  Caches can be defined on your classes or class instances.  For example,
 
@@ -65,103 +87,169 @@ To dynamically define caches just pass a block to your <tt>cached_</tt> calls.  
   
   => [#<Pet id: 11>, #<Pet id: 21>, #<Pet id: 3>]
 
-==== A more complex example
+=== Configuring Caches on your Models
 
-These dynamic caches make use of other cached collections.
+We can clean up our views significantly by configuring caches on our model rather than defining them dynamically and passing options in each time.  You configure caches by calling <tt>instance_caches(options={})</tt> or <tt>class_caches(options={})</tt> with a block and defining your caches inside the block (you don't need to prepend <tt>cached_</tt> when defining these caches because we are not returning results, just storing options).
 
-  @tracks  = @genre.cached_highlight_tracks(:order => 'release_date DESC', :include => [:album, :artist]) do
-    cached_tracks(:order => 'release_date DESC', :limit => 10, :include => [:album, :artist])
-  end
-  @artists = @genre.cached_highlight_artists do
-    cached_artists(:limit => 10)
-  end
-  @albums  = @genre.cached_highlight_albums(:order => 'release_date DESC', :include => :artist) do
-    cached_albums(:order => 'release_date DESC', :limit => 3, :include => :artist)
-  end
+You can pass a hash of options to <tt>instance_caches</tt> and <tt>class_caches</tt> to have those options applied to all caches in the block.  The following is a more complex example that also demonstrates nested cached calls.
 
-==== Configuring caches
-
-We can clean up our views significantly by configuring caches on our model rather than defining them dynamically and passing options in each time.  You configure caches by calling <tt>instance_caches</tt> or <tt>class_caches</tt> and passing in a block where you define your caches.  Options passed in here are applied to all subsequent calls to the corresponding <tt>cached_</tt> methods.
-
-You can pass a hash of options to <tt>instance_caches</tt> and <tt>class_caches</tt> to have those options applied to all caches in the block.
-
+  # app/models/genre.rb
   class Genre
-    instance_caches do
-      @order = 'release_date DESC'
-      highlight_tracks(:order => @order, :include => [:album, :artist]) do
-        cached_tracks(:order => 'release_date DESC', :limit => 10, :include => [:album, :artist])
+    class_caches do
+      most_popular do
+        popular(:limit => 10, :order => 'popularity DESC')
+      end
+    end
+    
+    instance_caches(:order => 'release_date DESC') do
+      highlight_tracks(:include => [:album, :artist]) do
+        cached_tracks(:limit => 10, :include => [:album, :artist])
       end
       highlight_artists do
         cached_artists(:limit => 10)
       end
-      highlight_albums(:order => @order, :include => :artist) do
-        cached_albums(:order => 'release_date DESC', :limit => 3, :include => :artist)
+      highlight_albums(:include => :artist) do
+        cached_albums(:limit => 3, :include => :artist)
       end
     end
   end
   
+  # app/controllers/genre_controller.rb
+  @most_popular = Genre.cached_most_popular
   @tracks  = @genre.cached_highlight_tracks
   @artists = @genre.cached_highlight_artists
   @albums  = @genre.cached_highlight_albums
 
+You can configure your caches in this manner wherever you want, but I think the model is a good place.  If you wanted to move all your cache configurations to a file in <tt>lib</tt> or elsewhere, your calls would look like,
 
+  Genre.class_caches do
+    ...
+  end
+  Genre.instance_caches do
+    ...
+  end
 
 ==  Cache Keys & Managing your Caches
 
-==== Cache Keys
+=== Cache Keys
 
 AridCache cache keys are defined based on the methods you call to interact with the cache.  For example:
 
   Album.cached_featured_albums  => cache key is arid-cache-album-featured_albums
-  album.cached_top_tracks       => cache key is like arid-cache-albums/2-20090930200-top_tracks
+  album.cached_top_tracks       => cache key is arid-cache-albums/<id>-top_tracks
     
-Caches on model instances automatically incorporate the ActiveRecord <tt>cache_key</tt> which includes the <tt>updated_at</tt> timestamp of that instance, making them auto-expire when the instance is updated.  (There will soon be an option to turn off this behaviour.)
+Caches on model instances can be set to automatically incorporate the ActiveRecord <tt>cache_key</tt> which includes the <tt>updated_at</tt> timestamp of that instance, making them auto-expire when the instance is updated.  To turn it on pass <tt>:auto_expire => true</tt> to your cache.
 
-Caches on your model classes (like on the results of named scopes) will not expire.  (I will soon add support for passing an <tt>:expires_in</tt> option to the cache store.)
+  album.cached_top_tracks(:auto_expire => true) => cache key like arid-cache-albums/2-20091211120100-top_tracks
+
+Or via the cache configuration,
+
+  Album.instance_caches do
+    top_tracks(:auto_expire => true)
+  end
+
+If you need to examine values in the cache yourself you can build the AridCache key by calling <tt>arid_cache_key('method')</tt> on your object.  Using the examples above we would call,
+
+  Album.arid_cache_key('featured_albums') => arid-cache-album-featured_albums
+  album.arid_cache_key('top_tracks')      => arid-cache-albums/2-top_tracks
+  album.arid_cache_key('top_tracks', :auto_expire => true) => arid-cache-albums/2-20091211120100-top_tracks
   
-==== Managing your Caches
+== Managing your Caches
 
-AridCache provides these methods to help you manage your caches:
+=== Deleting & Expiring Caches
+
+AridCache provides methods to help you clear your caches:
   
   AridCache.clear_caches      => expires all AridCache caches
   Model.clear_caches          => expires class and instance-level caches for this model
   Model.clear_instance_caches => expires instance-level caches for this model
   Model.clear_class_caches    => expires class-level caches for this model
   
-(The <tt>Model.clear_caches</tt> methods are also available on your model instances.)
+(The <tt>Model.clear_caches</tt> methods are also available on all model instances.  Your cache store will need to support the <tt>delete_matched</tt> method for these to work.)
 
-Alternatively you can pass a <tt>:force => true</tt> option in your <tt>cached_</tt> calls to force a refresh of a particular cache.  For example:
+Alternatively you can pass a <tt>:force => true</tt> option in your <tt>cached_</tt> calls to force a refresh of a particular cache, while still returning the refreshed results.  For example:
 
-  Album.cached_featured_albums(:force => true)
-  album.cached_top_tracks(:force => true)
+  Album.cached_featured_albums(:force => true)  => returns featured albums
+  album.cached_top_tracks(:force => true)       => returns top tracks
 
-== Cached Counts
+You can pass an <tt>:expires_in</tt> option to your caches to manage your cache expiry (if your cache store supports this option).
 
-AridCache gives you counts for free.  When a large collection is stored in the cache
-AridCache stores the count as well so the next time you want request the count it
-just takes a single read from the cache.  This is also supported for your non-ActiveRecord
-collections if the collection <tt>responds_to?(:count)</tt>.
+  Album.cached_featured_albums(:expires_in => 1.day)
+  album.cached_top_tracks(:expires_in => 1.day)
 
-Given that we have a cache like <tt>album.cached_tracks</tt> we can get the count by calling <tt>album.cached_tracks_count</tt>.
+Or via the cache configuration,
 
-In the case of a non-ActiveRecord collection such as <tt>album.cached_similar_genres</tt> which returns a list like <tt>['Pop', 'Rock', 'Rockabilly']</tt> we can get the cached length of this list with <tt>album.cached_similar_genres_count</tt>.
+  Album.instance_caches(:expires_in => 1.day) do
+    top_tracks
+    featured_albums
+  end
 
-Sometimes you may want the collection count without loading and caching the collection.  AridCache is smart enough that if you only ask for a count - and the collection hasn't already been cached - it will only query for the count.  This is only possible if the return value of your method is a named scope or association proxy (since these are lazy-loaded unlike a call to <tt>find()</tt>).  In the example above if we only ever call <tt>album.cached_tracks_count</tt>, only the count will be cached.  If we subsequently call <tt>album.cached_tracks</tt> the collection will be loaded and the IDs cached as per normal.
+If you would like to be able to pass more options to your cache store (like <tt>:raw</tt>, <tt>:unless_exist</tt>, etc), just add them to the <tt>AridCache::CacheProxy::OPTIONS_FOR_CACHE</tt> class constant, for example
 
-Other methods for caching counts are provided for us by virtue of ActiveRecord's built-in methods and named scopes.  For instance, to cache the count for a particular model we can call <tt>Artist.cached_count</tt>.
+  AridCache::CacheProxy::OPTIONS_FOR_CACHE.push(:raw, :unless_exist)
 
-== Pagination Support and Options to <tt>find</tt>
+== Extras 
 
-AridCache supports pagination using WillPaginate.  The IDs from the cache are paginated in memory and only that page is selected from the database - directly from the target table, without any expensive joins.
+=== Cached Counts
 
-You can also use the <tt>:limit</tt> and <tt>:offset</tt> options.  Again, the IDs from the cache are paginated in memory and only the requested records are selected from the database.
+AridCache gives you counts for free.  When a collection is stored in the cache
+AridCache stores the count as well so the next time you request the count it
+just takes a single read from the cache.
+
+To get the count just append <tt>_count</tt> to your <tt>cached_</tt> call.  For example, if we have a cache like <tt>album.cached_tracks</tt> we can get the count by calling,
   
-You can pass options like <tt>:include</tt> (or any other valid <tt>find</tt> options) to augment the results of your cached query.  Just because all of the options are supported, does not mean it's a good idea to use them.  Take a look at your logs to see how AridCache is interacting with the cache and the database if you don't get the results you expect.
+  album.cached_tracks        => returns an array of tracks
+  album.cached_tracks_count  => returns the count with a single read from the cache
+
+This is also supported for your non-ActiveRecord collections if the collection <tt>responds_to?(:count)</tt>.  For example,
+
+  album.cached_similar_genres       => returns ['Pop', 'Rock', 'Rockabilly']
+  album.cached_similar_genres_count => returns 3
+  
+Sometimes you may want the collection count without loading and caching the collection itself.  AridCache is smart enough that if you only ask for a count it will only query for the count.  This is only possible if the return value of your method is a named scope or association proxy (since these are lazy-loaded unlike a call to <tt>find()</tt>).
+
+In the example above if we only ever call <tt>album.cached_tracks_count</tt>, only the count will be cached.  If we subsequently call <tt>album.cached_tracks</tt> the collection will be loaded and the IDs cached as per normal.
+
+Other methods for caching counts are provided for us by virtue of ActiveRecord's built-in methods and named scopes, for example,
+
+  Artist.cached_count  # takes advantage of the built-in method Artist.count
+
+=== Pagination
+
+AridCache supports pagination using WillPaginate.  The IDs from the cache are paginated in memory and only that page is selected from the database - directly from the target table, which is extremely fast.  Another advantage is that we already have the size of the collection in the cache so not query is required to set the <tt>:total_entries</tt> on the <tt>WillPaginate::Collection</tt>.
+
+To paginate just pass a <tt>:page</tt> option in your call to <tt>cached_</tt>.  If you don't pass a value for <tt>:per_page</tt> AridCache gets the value from <tt>Model.per_page</tt>.
+
+Some examples of pagination:
+
+  User.cached_active(:page => 1, :per_page => 30)
+  User.cached_active(:page => 2)                  # uses User.per_page 
+  user.cached_pets(:page => 1)                    # uses Pet.per_page
+
+(Note that because the IDs are paginated in memory you cannot change the order of the collection while paginating.)
+
+=== Limit & Offset
+
+You can also use the <tt>:limit</tt> and <tt>:offset</tt> options.  These work slightly differently to pagination in that the IDs are not limited or offset in memory, but rather these options are applied to the whole collection in a regular call to <tt>find</tt>.
+
+The thinking here is that we often want to get a subset of a cached collection, and this often requires applying some kind of (different) ordering to the collection as a whole.  For example, we may have cached a genre's tracks and now we want the top 10 tracks.
+
+  genre.cached_tracks(:order => 'name ASC')
+  genre.cached_top_ten_tracks { cached_tracks(:limit => 10, :order => 'popularity DESC') }
+
+Another example:
+
+  user.cached_pets(:limit => 2, :include => :toys)
+  user.cached_pets(:limit => 2, :offset => 3, :include => :toys)
+  
+=== Other Options to <tt>find</tt>
+  
+You can pass options like <tt>:include</tt> (or any other valid <tt>find</tt> options) to augment the results of your cached query.  Just because all of the options are supported, does not mean it's a good idea to use them, though.  Take a look at your logs to see how AridCache is interacting with the cache and the database if you don't get the results you expect.
 
 For example, assume we have a <tt>named_scope :active</tt> on <tt>User</tt> which gives the active users.  We can call:
   
-  User.cached_active.paginate(:page => 1, :include => :preferences, :per_page => 10)
-  User.cached_active(:limit => 10, :offset => 0, :include => :preferences)
+  User.cached_active.paginate(:page => 2, :per_page => 10, :include => :preferences)
+  User.cached_active(:limit => 10, :offset => 10, :include => :preferences)
 
 (These calls return similar results, except that the first call returns a <tt>WillPaginate::Collection</tt> and the second just returns an <tt>Array</tt>.)
   
@@ -174,76 +262,8 @@ For example, assume we have a <tt>named_scope :active</tt> on <tt>User</tt> whic
 
 == Known Issues
 
-1. If you are caching a query which returns duplicate records (for example from the result of a join), subsequent calls to the cache will only return unique records.  This is because of the way <tt>find</tt> works when selecting multiple ids.  For example, <tt>user.find([1,1,1])</tt> returns <tt>[#<User id: 1>]</tt>, not <tt>[#<User id: 1>, #<User id: 1>, #<User id: 1>]</tt> as would have been returned from your initial query.
+1. Caches that contains duplicate records (for example from the result of a join), will only return unique records on subsequent calls.  This is because of the way <tt>find</tt> works when selecting multiple ids.  For example, if your query returns <tt>[#<User id: 1>, #<User id: 1>, #<User id: 1>]</tt>, the IDs are cached as <tt>[1,1,1]</tt>.  On the next call to the cache we load the IDs using <tt>user.find([1,1,1])</tt> which returns <tt>[#<User id: 1>]</tt>, not <tt>[#<User id: 1>, #<User id: 1>, #<User id: 1>]</tt> as you might have expected.
 
-== Examples
-
-==== Given the following model:
-
-  class User < ActiveRecord::Base
-    has_many    :pets
-    has_one     :preferences
-    named_scope :active, :conditions => [ 'updated_at <= ', 5.minutes.ago ]
-  end
-
-==== AridCache supports these methods (and many more):
- 
-  User.cached_count
-  User.cached_active         # caches the user IDs and the count
-  User.cached_active_count   # gets the count for free
-
-  user.cached_pets           # caches the pets IDs and the count
-  user.cached_pets_count     # gets the count for free
-   
-When we call these methods again, instead of doing a full select - usually including
-complex joins or over very large tables which makes this expensive - it just
-selects where the IDs are the cached IDs.
-
-It also gives you paging using WillPaginate.  The IDs from the cache are paginated and
-only that page is selected from the database - again directly from the table, without
-any complex joins.
-
-==== Some examples of pagination:
-
-  User.cached_active.paginate(:page => 1, :per_page => 30)
-  User.cached_active.paginate(:page => 1)
-  User.cached_active.paginate(:page => 3)
-
-You can also include options for find, such as <tt>:join</tt>, <tt>:include</tt> and <tt>order</tt>...basically any options that find supports.
-
-  User.cached_active.paginate(:page => 1, :include => :preferences)
-  User.cached_active.paginate(:page => 1, :order => 'created_at DESC') # don't change the order, just enforce it
-
-You can limit the results returned using <tt>:limit</tt> and <tt>:offset</tt>:
-
-  user.cached_pets(:limit => 2, :include => :toys)
-  user.cached_pets(:limit => 2, :offset => 3, :include => :toys)
-  
-==== You can dynamically create caches
-
-  User.cached_most_active_users do
-    self.active.find(:order => 'activity DESC', :limit => 10)
-  end
-
-Dynamic caches that make use of other cached collections:
-
-  @tracks  = @genre.cached_highlight_tracks(:order => 'release_date DESC', :include => [:album, :artist]) do
-    cached_tracks(:order => 'release_date DESC', :limit => 10, :include => [:album, :artist])
-  end
-  @artists = @genre.cached_highlight_artists do
-    cached_artists(:limit => 10)
-  end
-  @albums  = @genre.cached_highlight_albums(:order => 'release_date DESC', :include => :artist) do
-    cached_albums(:order => 'release_date DESC', :limit => 3, :include => :artist)
-  end
-    
-== Coming Soon
-
-* Configure your caches on your models (or anywhere else you like) by calling <tt>cache_</tt> methods and passing in options which are applied to all subsequent <tt>cached_</tt> calls on that cache.
-* Pass <tt>:expires_in</tt> options to the cache store to support expiring caches.
-* Support an <tt>:autoexpire => false</tt> option to turn off automatically including the <tt>updated_at</tt> timestamp in the cache key on instance caches.
-* Expanded docs.
-  
 == Contributions
 
 Contributions are welcome!  Please,

@@ -88,12 +88,13 @@ module AridCache
       if refresh_cache?
         execute_find
       elsif cached.is_a?(AridCache::CacheProxy::Result)
-        if cached.has_ids? # paginate and fetch here
+        if cached.has_ids?
           klass = find_class_of_results
-          if opts.include?(:page)
-            klass.paginate(cached.ids, opts_for_paginate)
+          if opts.include?(:page) # paginate array of ids in memory
+            paged_ids = cached.ids.paginate(opts_for_paginate(klass))
+            paged_ids.replace(klass.find(paged_ids, preserve_order(opts_for_find, paged_ids)))
           else
-            klass.find(cached.ids, opts_for_find)
+            klass.find(cached.ids, preserve_order(opts_for_find, cached.ids))
           end
         else
           execute_find
@@ -154,7 +155,7 @@ module AridCache
       # If you do want a specialized, modified, or subset of the collection it's best
       # to define it in a block and have a new cache for it:
       #
-      # model.my_special_collection { the_collection(:order => 'new order') }      
+      # model.my_special_collection { the_collection(:order => 'new order', :limit => 10) }      
       def return_records(records)
         if opts.include?(:page)
           records = records.respond_to?(:to_a) ? records.to_a : records
@@ -197,13 +198,18 @@ module AridCache
         cached.respond_to?(:count) ? cached.count : cached
       end
       
-      # Pass all the options to paginate, including the total count
-      def opts_for_paginate
-        combined_options.merge({ :total_entries => cached.count })
+      OPTIONS_FOR_PAGINATE = [:page, :per_page, :total_entries]
+      
+      # @arg klass target class, if supplied and no :per_page option is specified, calls
+      #      klass.per_page to get it
+      def opts_for_paginate(klass = nil)
+        paginate_opts = combined_options.reject { |k,v| !OPTIONS_FOR_PAGINATE.include?(k) }
+        paginate_opts[:per_page] = klass.per_page if klass && !paginate_opts.include?(:per_page)
+        paginate_opts
       end
     
       OPTIONS_FOR_FIND = [ :conditions, :include, :joins, :limit, :offset, :order, :select, :readonly, :group, :having, :from, :lock ]
-      
+
       def opts_for_find
         combined_options.reject { |k,v| !OPTIONS_FOR_FIND.include?(k) }
       end
@@ -227,5 +233,22 @@ module AridCache
       def find_class_of_results
         opts[:class] || (blueprint && blueprint.opts[:class]) || cached.klass || object_base_class
       end
+
+      # Preserve the original order of the results if no :order option is specified.
+      # The method we use depends on the database adapter because only MySQL 
+      # supports the ORDER BY FIELD() function.   
+      # @arg options hash options for find
+      # @arg ids array of ids to order by     
+      def preserve_order(options, ids)
+        return options if options.include?(:order)
+        if ::ActiveRecord::Base.is_mysql_adapter?
+          options[:order] = "FIELD(id,#{ids.join(',')})" 
+        else
+          order = ''
+          ids.each_index { |i| order << "WHEN id=#{ids[i]} THEN #{i+1} " }
+          options[:order] = "CASE " + order + " END"
+        end
+        options
+      end 
   end
 end

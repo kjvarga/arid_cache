@@ -81,7 +81,25 @@ module AridCache
 
       def class_caches(opts={}, &block)
         AridCache::Store::ClassCacheConfiguration.new(self, opts).instance_eval(&block) && nil     
-      end      
+      end  
+      
+    
+      MYSQL_ADAPTERS = ["ActiveRecord::ConnectionAdapters::MysqlAdapter", "ActiveRecord::ConnectionAdapters::MysqlplusAdapter"]
+
+      # Detect if a model is using a MySQL database.  This is a bit tricky and not
+      # well supported due to the fact that we are ourselves using a MasterSlaveAdapter
+      # which makes things a bit more difficult.
+      def is_mysql_adapter?
+        @is_mysql_adapter ||= begin
+          MYSQL_ADAPTERS.include?(self.connection.class.name) || MYSQL_ADAPTERS.include?(self.connection.connections.first.class.name)
+        rescue
+          false
+        end 
+      end  
+      
+      def is_mysql_adapter=(value)
+        @is_mysql_adapter = value
+      end 
     end
   end
 end

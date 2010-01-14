@@ -62,20 +62,13 @@ class AridCacheTest < ActiveSupport::TestCase
     assert_equal 1, results.current_page
   end
   
-  test "overrides default paginate options" do
-    results = @user.cached_companies(:page => 1, :per_page => 3)
-    assert_kind_of WillPaginate::Collection, results
-    assert_equal 3, results.size
-    assert_equal @user.companies.count, results.total_entries    
-  end
-  
-  test "works for different pages" do
+  test "should work for different pages" do
     results = @user.cached_companies(:page => 2, :per_page => 3)
     assert_kind_of WillPaginate::Collection, results
     assert results.size <= 3
     assert_equal @user.companies.count, results.total_entries  
     assert_equal 2, results.current_page  
-  end
+  end  
   
   test "ignores random parameters" do
     result = @user.cached_companies(:invalid => :params, 'random' => 'values', :user_id => 3)
@@ -237,7 +230,7 @@ class AridCacheTest < ActiveSupport::TestCase
     assert_equal AridCache.store.send(:instance_store_key, User, 'key'), AridCache.store.send(:object_store_key, @user, 'key')
     assert_equal AridCache.store.send(:class_store_key, User, 'key'), AridCache.store.send(:object_store_key, User, 'key')
   end
-
+  
   test "configuring caches should not perform any queries" do
     User.instance_caches do
       best_companies { companies }
@@ -249,7 +242,8 @@ class AridCacheTest < ActiveSupport::TestCase
   
   test "should support options in the cache configuration" do
     User.instance_caches(:auto_expire => true) do
-      best_companies(:expires_in => 1.second) { companies }
+      expires_in = 1.second
+      best_companies(:expires_in => expires_in) { companies }
     end
     assert_queries(2) do
       @user.cached_best_companies_count
@@ -266,6 +260,26 @@ class AridCacheTest < ActiveSupport::TestCase
     assert_equal User.successful.find(:all, :order => 'name DESC'), User.cached_most_successful   
   end
   
+  #
+  # Tests requiring manual verification by looking at the SQL logs.
+  # TODO move these to a separate class.
+  #
+   
+  test "should preserve original ordering" do
+    # TODO.  This one is hard to test because SQL usually keeps the same ordering
+    # and it's difficult to make it do otherwise.  Best to just inspect the queries
+    # in the log.
+    @user.cached_companies
+    @user.cached_companies
+  end
+
+  test "should paginate collections in memory" do
+    # TODO.  Tough to test because we can't just count queries
+    # have to look at the SQL in the logs for this one.
+    @user.cached_companies(:page => 2, :per_page => 3)
+    @user.cached_companies(:page => 1, :per_page => 3)
+  end  
+        
   protected
 
     def assert_queries(num = 1)
