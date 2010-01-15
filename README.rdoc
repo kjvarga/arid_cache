@@ -105,7 +105,7 @@ You can pass a hash of options to <tt>instance_caches</tt> and <tt>class_caches<
       highlight_tracks(:include => [:album, :artist]) do
         cached_tracks(:limit => 10, :include => [:album, :artist])
       end
-      highlight_artists do
+      highlight_artists(:order => nil) do   # override the global :order option 
         cached_artists(:limit => 10)
       end
       highlight_albums(:include => :artist) do
@@ -262,6 +262,13 @@ For example, assume we have a <tt>named_scope :active</tt> on <tt>User</tt> whic
 == Known Issues
 
 1. Caches that contains duplicate records (for example from the result of a join), will only return unique records on subsequent calls.  This is because of the way <tt>find</tt> works when selecting multiple ids.  For example, if your query returns <tt>[#<User id: 1>, #<User id: 1>, #<User id: 1>]</tt>, the IDs are cached as <tt>[1,1,1]</tt>.  On the next call to the cache we load the IDs using <tt>user.find([1,1,1])</tt> which returns <tt>[#<User id: 1>]</tt>, not <tt>[#<User id: 1>, #<User id: 1>, #<User id: 1>]</tt> as you might have expected.
+
+== Wish List / Coming Soon
+
+* Some kind of memoize option.
+* Priming caches.  Warm up the cache for all models based on the information in the instance and class cache configurations.  Would need to know when you want to prime counts as well.
+* The ability to <tt>include AridCache</tt> on any class or module.
+* An option to bypass ID caching when you want to store records in the cache.
 
 == Contributions
 
