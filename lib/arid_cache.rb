@@ -8,7 +8,7 @@ require 'arid_cache/cache_proxy'
 
 module AridCache
   extend AridCache::Helpers
-  class Error < StandardError; end
+  class Error < StandardError; end #:nodoc:
 
   def self.cache
     AridCache::CacheProxy

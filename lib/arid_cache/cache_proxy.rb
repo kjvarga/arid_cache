@@ -1,6 +1,6 @@
 module AridCache
   class CacheProxy
-    attr_accessor :object, :key, :opts, :blueprint, :cached, :cache_key, :block, :records, :combined_options
+    attr_accessor :object, :key, :opts, :blueprint, :cached, :cache_key, :block, :records, :combined_options, :klass
     
     # AridCache::CacheProxy::Result
     #
@@ -89,25 +89,8 @@ module AridCache
         execute_find
       elsif cached.is_a?(AridCache::CacheProxy::Result)
         if cached.has_ids?
-          klass = cached.klass || object_base_class
-          if combined_options.include?(:page)    
-            if combined_options.include?(:order) # order and paginate in the database
-              klass.paginate(cached.ids, opts_for_find.merge(opts_for_paginate(klass)))
-            else # paginate in memory
-              paged_ids = cached.ids.paginate(opts_for_paginate(klass))
-              paged_ids.replace(klass.find(paged_ids, preserve_order(opts_for_find, paged_ids)))
-            end
-          elsif combined_options.include?(:limit) || combined_options.include?(:offset)
-            if combined_options.include?(:order) # limit and offset in the database
-              klass.find(cached.ids, opts_for_find)
-            else # limit and offset in memory
-              offset, limit = combined_options.delete(:offset) || 0, combined_options.delete(:limit) || cached.count
-              ids = cached.ids[offset, limit]
-              klass.find(ids, preserve_order(opts_for_find, ids))
-            end
-          else
-            klass.find(cached.ids, opts_for_find)
-          end
+          self.klass = cached.klass || object_base_class
+          fetch_from_cache
         else
           execute_find
         end
@@ -118,6 +101,43 @@ module AridCache
       
     private
 
+      def fetch_from_cache
+        if paginate?
+          fetch_and_paginate
+        elsif limit_or_offset?
+          fetch_and_limit
+        else
+          klass.find(cached.ids, opts_for_find)
+        end        
+      end
+      
+      def fetch_and_paginate
+        if combined_options.include?(:order) # order and paginate in the database
+          klass.paginate(cached.ids, opts_for_find.merge(opts_for_paginate))
+        else # paginate in memory
+          paged_ids = cached.ids.paginate(opts_for_paginate)
+          paged_ids.replace(klass.find(paged_ids, opts_for_find(paged_ids)))
+        end        
+      end
+      
+      def fetch_and_limit
+        if combined_options.include?(:order)
+          klass.find(cached.ids, opts_for_find)
+        else
+          offset, limit = combined_options.delete(:offset) || 0, combined_options.delete(:limit) || cached.count
+          ids = cached.ids[offset, limit]
+          klass.find(ids, opts_for_find(ids))
+        end          
+      end
+      
+      def paginate?
+        combined_options.include?(:page)
+      end
+      
+      def limit_or_offset?
+        combined_options.include?(:limit) || combined_options.include?(:offset)
+      end
+      
       def refresh_cache?
         cached.nil? || opts[:force]
       end
@@ -212,9 +232,8 @@ module AridCache
       
       OPTIONS_FOR_PAGINATE = [:page, :per_page, :total_entries]
       
-      # @arg klass target class, if supplied and no :per_page option is specified, calls
-      #      klass.per_page to get it
-      def opts_for_paginate(klass = nil)
+      # Filter options for paginate, if *klass* is set, we get the :per_page value from it.
+      def opts_for_paginate
         paginate_opts = combined_options.reject { |k,v| !OPTIONS_FOR_PAGINATE.include?(k) }
         paginate_opts[:per_page] = klass.per_page if klass && !paginate_opts.include?(:per_page)
         paginate_opts
@@ -222,8 +241,15 @@ module AridCache
     
       OPTIONS_FOR_FIND = [ :conditions, :include, :joins, :limit, :offset, :order, :select, :readonly, :group, :having, :from, :lock ]
 
-      def opts_for_find
-        combined_options.reject { |k,v| !OPTIONS_FOR_FIND.include?(k) }
+      # Preserve the original order of the results if no :order option is specified.
+      # 
+      # @arg ids array of ids to order by unless an :order option is specified.  If not
+      #      specified, cached.ids is used.
+      def opts_for_find(ids=nil)
+        ids ||= cached.ids
+        find_opts = combined_options.reject { |k,v| !OPTIONS_FOR_FIND.include?(k) }
+        find_opts[:order] = preserve_order(ids) unless find_opts.include?(:order)
+        find_opts
       end
       
       OPTIONS_FOR_CACHE = [ :expires_in ]
@@ -238,25 +264,25 @@ module AridCache
         combined_options.reject { |k,v| !OPTIONS_FOR_CACHE_KEY.include?(k) }
       end
             
-      def object_base_class
+      def object_base_class #:nodoc:
         object.is_a?(Class) ? object : object.class
       end
 
-      # Preserve the original order of the results if no :order option is specified.
+      # Generate an ORDER BY clause that preserves the ordering of the ids in *ids*.
+      #
       # The method we use depends on the database adapter because only MySQL 
-      # supports the ORDER BY FIELD() function.   
-      # @arg options hash options for find
-      # @arg ids array of ids to order by     
-      def preserve_order(options, ids)
-        return options if options.include?(:order)
+      # supports the ORDER BY FIELD() function.  For other databases we use
+      # a CASE statement.
+      # 
+      # TODO: is it quicker to sort in memory?
+      def preserve_order(ids)
         if ::ActiveRecord::Base.is_mysql_adapter?
-          options[:order] = "FIELD(id,#{ids.join(',')})" 
+          "FIELD(id,#{ids.join(',')})" 
         else
           order = ''
           ids.each_index { |i| order << "WHEN id=#{ids[i]} THEN #{i+1} " }
-          options[:order] = "CASE " + order + " END"
+          "CASE " + order + " END"
         end
-        options
       end 
   end
 end

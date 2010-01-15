@@ -65,8 +65,8 @@ module AridCache
         end
       end
     end
-    class InstanceCacheConfiguration < Configuration; end
-    class ClassCacheConfiguration    < Configuration; end
+    class InstanceCacheConfiguration < Configuration; end #:nodoc:
+    class ClassCacheConfiguration    < Configuration; end #:nodoc:
     
     def has?(object, key)
       self.include?(object_store_key(object, key))
@@ -86,20 +86,17 @@ module AridCache
     end
     
     def add_instance_cache_configuration(klass, key, opts, proc)
-      store_key = instance_store_key(klass, key)
-      self[store_key] = AridCache::Store::Blueprint.new(klass, key, opts, proc)
+      add_generic_cache_configuration(instance_store_key(klass, key), klass, key, opts, proc)
     end
 
     def add_class_cache_configuration(klass, key, opts, proc)
-      store_key = class_store_key(klass, key)
-      self[store_key] = AridCache::Store::Blueprint.new(klass, key, opts, proc)
+      add_generic_cache_configuration(class_store_key(klass, key), klass, key, opts, proc)
     end
 
     def add_object_cache_configuration(object, key, opts, proc)
-      store_key = object_store_key(object, key)
-      self[store_key] = AridCache::Store::Blueprint.new(object, key, opts, proc)
+      add_generic_cache_configuration(object_store_key(object, key), object, key, opts, proc)
     end
-            
+    
     def find_or_create(object, key)
       store_key = object_store_key(object, key)
       if self.include?(store_key)
@@ -111,6 +108,10 @@ module AridCache
     
     protected
     
+    def add_generic_cache_configuration(store_key, *args)
+      self[store_key] = AridCache::Store::Blueprint.new(*args)
+    end
+      
     def initialize
     end
     
