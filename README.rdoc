@@ -259,6 +259,14 @@ For example, assume we have a <tt>named_scope :active</tt> on <tt>User</tt> whic
 * If you only request a count AridCache will only select the count.  See <i>Cached Counts</i>.
 * If a collection has already been loaded, you get the count for free.  See <i>Cached Counts</i>.
 
+== Compatibility
+
+<b>Requires Ruby >= 1.8.7</b> due to changes to block argument handling that were made to 1.9 and back-ported to 1.8.7.
+
+The version of Rails shouldn't matter much, but FYI I'm using 2.3.4.
+
+Let me know if you encounter any problems.
+
 == Known Issues
 
 1. Caches that contains duplicate records (for example from the result of a join), will only return unique records on subsequent calls.  This is because of the way <tt>find</tt> works when selecting multiple ids.  For example, if your query returns <tt>[#<User id: 1>, #<User id: 1>, #<User id: 1>]</tt>, the IDs are cached as <tt>[1,1,1]</tt>.  On the next call to the cache we load the IDs using <tt>user.find([1,1,1])</tt> which returns <tt>[#<User id: 1>]</tt>, not <tt>[#<User id: 1>, #<User id: 1>, #<User id: 1>]</tt> as you might have expected.
