@@ -54,4 +54,4 @@ require 'db/prepare'
 
 ActiveRecord::Base.logger.info("#{"="*25} RUNNING UNIT TESTS #{"="*25}\n\t\t\t#{Time.now.to_s}\n#{"="*70}")
 
-
+Array.class_eval { alias count size } if RUBY_VERSION < '1.8.7'

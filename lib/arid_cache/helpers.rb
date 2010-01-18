@@ -64,22 +64,16 @@ module AridCache
     private
 
     def method_for_cached(object, key, fetch_method=:fetch, method_name=nil)
-      method_name = "cached_" + (method_name || key)
-      if object.is_a?(Class)
-        (class << object; self; end).instance_eval do
-          define_method(method_name) do |*args, &block|
-            opts = args.empty? ? {} : args.first
-            AridCache.cache.send(fetch_method, self, key, opts, &block)
-          end
+      method_name = ("cached_" + (method_name || key)).gsub(/[^\w\!\?]/, '_')
+      method_body = <<-END
+        def #{method_name}(*args, &block)
+          opts = args.empty? ? {} : args.first
+          AridCache.cache.send(#{fetch_method.inspect}, self, #{key.inspect}, opts, &block)
         end
-      else
-        object.class_eval do
-          define_method(method_name) do |*args, &block|
-            opts = args.empty? ? {} : args.first
-            AridCache.cache.send(fetch_method, self, key, opts, &block)
-          end
-        end
-      end
+      END
+      # Get the correct object
+      object = (class << object; self; end) if object.is_a?(Class)
+      object.class_eval(method_body, __FILE__, __LINE__)
     end
   end  
 end
