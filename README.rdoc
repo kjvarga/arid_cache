@@ -271,6 +271,7 @@ The version of Rails shouldn't matter much, but it's working on 2.3.4.
 
 == Resources & Metrics
 
+
 * {RDoc}[http://rdoc.info/projects/kjvarga/arid_cache]
 * {GetCaliper Metrics}[http://getcaliper.com/caliper/project?repo=git%3A%2F%2Fgithub.com%2Fkjvarga%2Farid_cache.git]
 
@@ -294,6 +295,7 @@ Contributions are welcome!  Please,
 * Add tests for it (this is important so I don't break it in a future release).
 * Commit (don't mess with the Rakefile, version, or history).
 * Send me a pull request.
+
 
 ==== Thank-you to these contributors to AridCache:
 
