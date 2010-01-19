@@ -269,7 +269,7 @@ Let me know if you encounter any problems.
 
 == Known Issues
 
-1. Caches that contains duplicate records (for example from the result of a join), will only return unique records on subsequent calls.  This is because of the way <tt>find</tt> works when selecting multiple ids.  For example, if your query returns <tt>[#<User id: 1>, #<User id: 1>, #<User id: 1>]</tt>, the IDs are cached as <tt>[1,1,1]</tt>.  On the next call to the cache we load the IDs using <tt>user.find([1,1,1])</tt> which returns <tt>[#<User id: 1>]</tt>, not <tt>[#<User id: 1>, #<User id: 1>, #<User id: 1>]</tt> as you might have expected.
+1. Caches that contains duplicate records (for example from the result of a join), will only return unique records on subsequent calls.  This is because of the way <tt>find</tt> works when selecting multiple ids.  For example, if your query returns <tt>[#<User id: 1>, #<User id: 1>, #<User id: 1>]</tt>, the IDs are cached as <tt>[1,1,1]</tt>.  On the next call to the cache we load the IDs using <tt>User.find([1,1,1])</tt> which returns <tt>[#<User id: 1>]</tt>, not <tt>[#<User id: 1>, #<User id: 1>, #<User id: 1>]</tt> as you might have expected.
 
 == Wish List / Coming Soon
 
