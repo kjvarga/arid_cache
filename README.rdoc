@@ -261,11 +261,18 @@ For example, assume we have a <tt>named_scope :active</tt> on <tt>User</tt> whic
 
 == Compatibility
 
-<b>Requires Ruby >= 1.8.7</b> due to changes to block argument handling that were made to 1.9 and back-ported to 1.8.7.
+Tested on Ruby 1.8.6 and 1.8.7.  Should be compatible with 1.9.
 
-The version of Rails shouldn't matter much, but FYI I'm using 2.3.4.
+For Ruby < 1.8.7 you probably want to include the following to extend the Array class with a <tt>count</tt> method.  Otherwise your <tt>cached_<key>_count</tt> calls probably won't work:
+  
+  Array.class_eval { alias count size }
 
-Let me know if you encounter any problems.
+The version of Rails shouldn't matter much, but it's working on 2.3.4.
+
+== Resources & Metrics
+
+* {RDoc}[http://rdoc.info/projects/kjvarga/arid_cache]
+* {GetCaliper Metrics}[http://getcaliper.com/caliper/project?repo=git%3A%2F%2Fgithub.com%2Fkjvarga%2Farid_cache.git]
 
 == Known Issues
 
@@ -278,7 +285,7 @@ Let me know if you encounter any problems.
 * The ability to <tt>include AridCache</tt> on any class or module.
 * An option to bypass ID caching when you want to store records in the cache.
 
-== Contributions
+== Contributors
 
 Contributions are welcome!  Please,
 
@@ -287,6 +294,10 @@ Contributions are welcome!  Please,
 * Add tests for it (this is important so I don't break it in a future release).
 * Commit (don't mess with the Rakefile, version, or history).
 * Send me a pull request.
+
+==== Thank-you to these contributors to AridCache:
+
+* {Sutto}[http://github.com/Sutto]
 
 == Copyright
 
