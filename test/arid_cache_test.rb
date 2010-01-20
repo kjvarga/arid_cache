@@ -291,7 +291,27 @@ class AridCacheTest < ActiveSupport::TestCase
     assert_equal User.successful.find(:all, :order => 'name DESC'), User.cached_most_successful
     assert_equal User.successful.find(:all, :order => 'name DESC'), User.cached_most_successful   
   end
-  
+
+  test "should not raise an error if all cached ids cannot be found" do
+    @user.cached_companies
+    key = @user.arid_cache_key('companies')
+    cached_result = Rails.cache.read(key)
+    cached_result.ids.push(24342234, 243234132)
+    Rails.cache.write(key, cached_result)
+    assert_nothing_raised { @user.cached_companies }
+    assert_equal @user.cached_companies, @user.companies
+  end
+
+  test "should not raise an error if all cached ids cannot be found while paginating" do
+    @user.cached_companies
+    key = @user.arid_cache_key('companies')
+    cached_result = Rails.cache.read(key)
+    cached_result.ids.push(24342234, 243234132)
+    Rails.cache.write(key, cached_result)
+    assert_nothing_raised { @user.cached_companies(:page => 1, :order => 'name DESC') }
+    assert_equal @user.cached_companies(:page => 1, :order => 'name DESC'), @user.companies.paginate(:page => 1, :order => 'name DESC')
+  end
+              
   #
   # Tests requiring manual verification by looking at the SQL logs.
   # TODO move these to a separate class.
@@ -311,7 +331,7 @@ class AridCacheTest < ActiveSupport::TestCase
     @user.cached_companies(:page => 2, :per_page => 3)
     @user.cached_companies(:page => 1, :per_page => 3)
   end  
-        
+
   protected
 
     def assert_queries(num = 1)

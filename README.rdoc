@@ -40,7 +40,7 @@ You can also define caches that use compositions of methods or named scopes, or 
 
 If the result of your <tt>cached_</tt> call is an array of ActiveRecords, AridCache only stores the IDs in the cache (because it's a bad idea to store records in the cache).
 
-On subsequent calls we call <tt>find</tt> on the target class passing in the ActiveRecord IDs that were stored in the cache.  AridCache will preserve the original ordering of your collection (you can change this using the <tt>:order</tt>).
+On subsequent calls we call <tt>find_all_by_id</tt> on the target class passing in the ActiveRecord IDs that were stored in the cache.  AridCache will preserve the original ordering of your collection (you can change this using the <tt>:order</tt>).
 
 The idea here is to cache collections that are expensive to query.  Once the cache is loaded, retrieving the cached records from the database simply involves a <tt>SELECT * FROM table WHERE id IN (ids, ...)</tt>.
 
@@ -281,7 +281,7 @@ The version of Rails shouldn't matter much, but it's working on 2.3.4.
 
 == Known Issues
 
-1. Caches that contains duplicate records (for example from the result of a join), will only return unique records on subsequent calls.  This is because of the way <tt>find</tt> works when selecting multiple ids.  For example, if your query returns <tt>[#<User id: 1>, #<User id: 1>, #<User id: 1>]</tt>, the IDs are cached as <tt>[1,1,1]</tt>.  On the next call to the cache we load the IDs using <tt>User.find([1,1,1])</tt> which returns <tt>[#<User id: 1>]</tt>, not <tt>[#<User id: 1>, #<User id: 1>, #<User id: 1>]</tt> as you might have expected.
+1. Caches that contains duplicate records (for example from the result of a join), will only return unique records on subsequent calls.  This is because of the way <tt>find</tt> works when selecting multiple ids.  For example, if your query returns <tt>[#<User id: 1>, #<User id: 1>, #<User id: 1>]</tt>, the IDs are cached as <tt>[1,1,1]</tt>.  On the next call to the cache we load the IDs using <tt>User.find_all_by_id([1,1,1])</tt> which returns <tt>[#<User id: 1>]</tt>, not <tt>[#<User id: 1>, #<User id: 1>, #<User id: 1>]</tt> as you might have expected.
 
 == Wish List / Coming Soon
 

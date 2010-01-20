@@ -107,7 +107,7 @@ module AridCache
         elsif limit_or_offset?
           fetch_and_limit
         else
-          klass.find(cached.ids, opts_for_find)
+          klass.find_all_by_id(cached.ids, opts_for_find)
         end        
       end
       
@@ -116,17 +116,17 @@ module AridCache
           klass.paginate(cached.ids, opts_for_find.merge(opts_for_paginate))
         else # paginate in memory
           paged_ids = cached.ids.paginate(opts_for_paginate)
-          paged_ids.replace(klass.find(paged_ids, opts_for_find(paged_ids)))
+          paged_ids.replace(klass.find_all_by_id(paged_ids, opts_for_find(paged_ids)))
         end        
       end
       
       def fetch_and_limit
         if combined_options.include?(:order)
-          klass.find(cached.ids, opts_for_find)
+          klass.find_all_by_id(cached.ids, opts_for_find)
         else
           offset, limit = combined_options.delete(:offset) || 0, combined_options.delete(:limit) || cached.count
           ids = cached.ids[offset, limit]
-          klass.find(ids, opts_for_find(ids))
+          klass.find_all_by_id(ids, opts_for_find(ids))
         end          
       end
       
@@ -230,11 +230,12 @@ module AridCache
         cached.respond_to?(:count) ? cached.count : cached
       end
       
-      OPTIONS_FOR_PAGINATE = [:page, :per_page, :total_entries]
+      OPTIONS_FOR_PAGINATE = [:page, :per_page, :total_entries, :finder]
       
       # Filter options for paginate, if *klass* is set, we get the :per_page value from it.
       def opts_for_paginate
         paginate_opts = combined_options.reject { |k,v| !OPTIONS_FOR_PAGINATE.include?(k) }
+        paginate_opts[:finder] = :find_all_by_id unless paginate_opts.include?(:finder)
         paginate_opts[:per_page] = klass.per_page if klass && !paginate_opts.include?(:per_page)
         paginate_opts
       end
