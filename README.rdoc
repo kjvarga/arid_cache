@@ -136,11 +136,13 @@ AridCache cache keys are defined based on the methods you call to interact with 
   Album.cached_featured_albums  => cache key is arid-cache-album-featured_albums
   album.cached_top_tracks       => cache key is arid-cache-albums/<id>-top_tracks
     
-Caches on model instances can be set to automatically incorporate the ActiveRecord <tt>cache_key</tt> which includes the <tt>updated_at</tt> timestamp of that instance, making them auto-expire when the instance is updated.  To turn it on pass <tt>:auto_expire => true</tt> to your cache.
+Caches on model instances can be set to automatically incorporate the ActiveRecord <tt>cache_key</tt> which includes the <tt>updated_at</tt> timestamp of that instance, making them auto-expire when the instance is updated.  
+
+To incorporate the the <tt>cache_key</tt> pass <b><tt>:auto_expire => true</tt></b> to your cache method:
 
   album.cached_top_tracks(:auto_expire => true) => cache key like arid-cache-albums/2-20091211120100-top_tracks
 
-Or via the cache configuration,
+Or via the cache configuration:
 
   Album.instance_caches do
     top_tracks(:auto_expire => true)
@@ -163,14 +165,16 @@ AridCache provides methods to help you clear your caches:
   Model.clear_instance_caches => expires instance-level caches for this model
   Model.clear_class_caches    => expires class-level caches for this model
   
-(The <tt>Model.clear_caches</tt> methods are also available on all model instances.  Your cache store will need to support the <tt>delete_matched</tt> method for these to work.)
+The <tt>Model.clear_caches</tt> methods are also available on all model instances.
 
-Alternatively you can pass a <tt>:force => true</tt> option in your <tt>cached_</tt> calls to force a refresh of a particular cache, while still returning the refreshed results.  For example:
+<B>Your cache store needs to support the <tt>delete_matched</tt> method for the above to work. Currently MemCacheStore and MemoryStore do not.</b>
+ 
+Alternatively you can pass a <b><tt>:force => true</tt></b> option in your <tt>cached_</tt> calls to force a refresh of a particular cache, while still returning the refreshed results.  For example:
 
   Album.cached_featured_albums(:force => true)  => returns featured albums
   album.cached_top_tracks(:force => true)       => returns top tracks
 
-You can pass an <tt>:expires_in</tt> option to your caches to manage your cache expiry (if your cache store supports this option).
+You can pass an <b><tt>:expires_in</tt></b> option to your caches to manage your cache expiry (if your cache store supports this option).
 
   Album.cached_featured_albums(:expires_in => 1.day)
   album.cached_top_tracks(:expires_in => 1.day)
@@ -285,6 +289,7 @@ The version of Rails shouldn't matter much, but it's working on 2.3.4.
 * Priming caches.  Warm up the cache for all models based on the information in the instance and class cache configurations.  Would need to know when you want to prime counts as well.
 * The ability to <tt>include AridCache</tt> on any class or module.
 * An option to bypass ID caching when you want to store records in the cache.
+* Option to turn off the <tt>respond_to?</tt> requirement for caches without blocks in cases where methods are implemented using method_missing and respond_to? hasn't been properly updated.
 
 == Contributors
 
