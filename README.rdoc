@@ -281,7 +281,8 @@ The version of Rails shouldn't matter much, but it's working on 2.3.4.
 
 == Known Issues
 
-1. Caches that contains duplicate records (for example from the result of a join), will only return unique records on subsequent calls.  This is because of the way <tt>find</tt> works when selecting multiple ids.  For example, if your query returns <tt>[#<User id: 1>, #<User id: 1>, #<User id: 1>]</tt>, the IDs are cached as <tt>[1,1,1]</tt>.  On the next call to the cache we load the IDs using <tt>User.find_all_by_id([1,1,1])</tt> which returns <tt>[#<User id: 1>]</tt>, not <tt>[#<User id: 1>, #<User id: 1>, #<User id: 1>]</tt> as you might have expected.
+1. <b>Caches that contains duplicate records will only return unique records on subsequent calls</b>.  This is because of the way <tt>find</tt> works when selecting multiple ids.  For example, if your query returns <tt>[#<User id: 1>, #<User id: 1>, #<User id: 1>]</tt>, the IDs are cached as <tt>[1,1,1]</tt>.  On the next call to the cache we load the IDs using <tt>User.find_all_by_id([1,1,1])</tt> which returns <tt>[#<User id: 1>]</tt>, not <tt>[#<User id: 1>, #<User id: 1>, #<User id: 1>]</tt> as you might have expected.
+2. <b>You can't cache polymorphic arrays</b> e.g. [#<User id: 1>, #<Pet id: 5>] because it expects all ActiveRecords to be of the same class.  We could accept a <tt>:polymorphic => true</tt> option but I don't think this is a great idea because instantiating all the records would result in a lot of queries to the individual tables.
 
 == Wish List / Coming Soon
 
