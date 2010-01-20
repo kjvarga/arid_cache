@@ -277,7 +277,9 @@ module AridCache
       # 
       # TODO: is it quicker to sort in memory?
       def preserve_order(ids)
-        if ::ActiveRecord::Base.is_mysql_adapter?
+        if ids.empty?
+          nil
+        elsif ::ActiveRecord::Base.is_mysql_adapter?
           "FIELD(id,#{ids.join(',')})" 
         else
           order = ''

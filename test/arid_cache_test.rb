@@ -311,7 +311,13 @@ class AridCacheTest < ActiveSupport::TestCase
     assert_nothing_raised { @user.cached_companies(:page => 1, :order => 'name DESC') }
     assert_equal @user.cached_companies(:page => 1, :order => 'name DESC'), @user.companies.paginate(:page => 1, :order => 'name DESC')
   end
-              
+
+  test "should handle empty collections" do
+    @user.cached_empty_collection { [] }
+    assert_nothing_raised { @user.cached_empty_collection }
+    assert_nothing_raised { @user.cached_empty_collection }
+  end
+                
   #
   # Tests requiring manual verification by looking at the SQL logs.
   # TODO move these to a separate class.
