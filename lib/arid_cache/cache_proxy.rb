@@ -47,11 +47,11 @@ module AridCache
     # Fetching results
     #
     
-    def self.fetch_count(object, key, opts, &block)
+    def self.fetch_count(object, key, opts={}, &block)
       CacheProxy.new(object, key, opts, &block).fetch_count
     end
           
-    def self.fetch(object, key, opts, &block)
+    def self.fetch(object, key, opts={}, &block)
       CacheProxy.new(object, key, opts, &block).fetch
     end
 
@@ -143,7 +143,7 @@ module AridCache
       end
       
       def get_records
-        block = block || (blueprint && blueprint.proc)
+        block = self.block || (blueprint && blueprint.proc)
         self.records = block.nil? ? object.instance_eval(key) : object.instance_eval(&block)
       end
       

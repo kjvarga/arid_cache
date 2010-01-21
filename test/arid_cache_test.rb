@@ -328,7 +328,16 @@ class AridCacheTest < ActiveSupport::TestCase
       assert_equal (total/3.0).ceil, page.total_pages
     end
   end
-                  
+
+  test "should support calling store methods directly with a block" do
+    assert_nothing_raised do
+      AridCache.cache.fetch(@user, 'my-fancy-key') do
+        companies
+      end
+    end
+    assert_equal @user.companies.all(:order => 'name DESC'), AridCache.cache.fetch(@user, 'my-fancy-key', :order => 'name DESC') { companies }
+  end
+                    
   #
   # Tests requiring manual verification by looking at the SQL logs.
   # TODO move these to a separate class.
