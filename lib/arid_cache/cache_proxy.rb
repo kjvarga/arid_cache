@@ -113,7 +113,7 @@ module AridCache
       
       def fetch_and_paginate
         if combined_options.include?(:order) # order and paginate in the database
-          klass.paginate(cached.ids, opts_for_find.merge(opts_for_paginate))
+          klass.paginate(cached.ids, { :total_entries => cached.ids.size }.merge(opts_for_find.merge(opts_for_paginate)))
         else # paginate in memory
           paged_ids = cached.ids.paginate(opts_for_paginate)
           paged_ids.replace(klass.find_all_by_id(paged_ids, opts_for_find(paged_ids)))

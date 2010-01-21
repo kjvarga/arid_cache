@@ -291,7 +291,7 @@ class AridCacheTest < ActiveSupport::TestCase
     assert_equal User.successful.find(:all, :order => 'name DESC'), User.cached_most_successful
     assert_equal User.successful.find(:all, :order => 'name DESC'), User.cached_most_successful   
   end
-
+  
   test "should not raise an error if all cached ids cannot be found" do
     @user.cached_companies
     key = @user.arid_cache_key('companies')
@@ -301,7 +301,7 @@ class AridCacheTest < ActiveSupport::TestCase
     assert_nothing_raised { @user.cached_companies }
     assert_equal @user.cached_companies, @user.companies
   end
-
+  
   test "should not raise an error if all cached ids cannot be found while paginating" do
     @user.cached_companies
     key = @user.arid_cache_key('companies')
@@ -311,13 +311,24 @@ class AridCacheTest < ActiveSupport::TestCase
     assert_nothing_raised { @user.cached_companies(:page => 1, :order => 'name DESC') }
     assert_equal @user.cached_companies(:page => 1, :order => 'name DESC'), @user.companies.paginate(:page => 1, :order => 'name DESC')
   end
-
+  
   test "should handle empty collections" do
     @user.cached_empty_collection { [] }
     assert_nothing_raised { @user.cached_empty_collection }
     assert_nothing_raised { @user.cached_empty_collection }
   end
-                
+
+  test "should return proper paginate results when we include order" do
+    total = @user.companies.count
+    assert_queries(2) do
+      @user.cached_companies
+      page = @user.cached_companies(:page => 2, :per_page => 3, :order => 'name desc') # call again to get cached results
+      assert_equal total,          page.total_entries
+      assert_equal 2,              page.current_page
+      assert_equal (total/3.0).ceil, page.total_pages
+    end
+  end
+                  
   #
   # Tests requiring manual verification by looking at the SQL logs.
   # TODO move these to a separate class.
