@@ -8,7 +8,7 @@ begin
     gem.summary = %Q{Automates efficient caching of your ActiveRecord collections, gives you counts for free and supports pagination.}
     gem.description = <<-END.gsub(/^\s+/, '')
       AridCache makes caching easy and effective.  AridCache supports caching on all your model named scopes, class methods and instance methods right out of the box.  AridCache prevents caching logic from cluttering your models and clarifies your logic by making explicit calls to cached result sets.
-      
+
       AridCache is designed for handling large, expensive ActiveRecord collections but is equally useful for caching anything else as well.
     END
     gem.email = "kjvarga@gmail.com"
@@ -30,13 +30,13 @@ end
 #   spec.libs << 'lib' << 'spec'
 #   spec.spec_files = FileList['spec/**/*_spec.rb']
 # end
-# 
+#
 # Spec::Rake::SpecTask.new(:rcov) do |spec|
 #   spec.libs << 'lib' << 'spec'
 #   spec.pattern = 'spec/**/*_spec.rb'
 #   spec.rcov = true
 # end
-# 
+#
 # task :spec => :check_dependencies
 
 require 'rake/testtask'
@@ -57,4 +57,12 @@ Rake::RDocTask.new do |rdoc|
   rdoc.title = "arid_cache #{version}"
   rdoc.rdoc_files.include('README*')
   rdoc.rdoc_files.include('lib/**/*.rb')
+end
+
+desc "Release a new patch version"
+task :release_new_version do
+  Rake::Task['version:bump:patch'].invoke
+  Rake::Task['github:release'].invoke
+  Rake::Task['git:release'].invoke
+  Rake::Task['gemcutter:release'].invoke
 end
