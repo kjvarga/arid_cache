@@ -2,6 +2,7 @@ require 'arid_cache'
 
 class User < ActiveRecord::Base
   has_many :companies, :foreign_key => :owner_id
+  has_many :empty_user_relations  # This must always return an empty list
   named_scope :companies, :joins => :companies
   named_scope :successful, :joins => :companies, :conditions => 'companies.employees > 50', :group => 'users.id'
   

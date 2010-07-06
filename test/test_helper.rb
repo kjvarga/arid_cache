@@ -11,7 +11,7 @@ require 'test/unit' # required by ActiveSupport::TestCase
 require 'will_paginate'
 require 'ruby-debug'
 
-# Activate Will Paginate 
+# Activate Will Paginate
 WillPaginate.enable_activerecord
 
 # Add support for expiring file-cache store.
