@@ -9,7 +9,7 @@ Gem::Specification.new do |s|
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Karl Varga"]
-  s.date = %q{2010-01-21}
+  s.date = %q{2010-07-05}
   s.description = %q{AridCache makes caching easy and effective.  AridCache supports caching on all your model named scopes, class methods and instance methods right out of the box.  AridCache prevents caching logic from cluttering your models and clarifies your logic by making explicit calls to cached result sets.
 AridCache is designed for handling large, expensive ActiveRecord collections but is equally useful for caching anything else as well.
 }
@@ -44,6 +44,7 @@ AridCache is designed for handling large, expensive ActiveRecord collections but
      "test/lib/blueprint.rb",
      "test/log/.gitignore",
      "test/models/company.rb",
+     "test/models/empty_user_relation.rb",
      "test/models/user.rb",
      "test/test_helper.rb"
   ]
@@ -61,6 +62,7 @@ AridCache is designed for handling large, expensive ActiveRecord collections but
      "test/lib/active_support/cache/file_store_extras.rb",
      "test/lib/blueprint.rb",
      "test/models/company.rb",
+     "test/models/empty_user_relation.rb",
      "test/models/user.rb",
      "test/test_helper.rb"
   ]
