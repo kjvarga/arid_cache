@@ -84,7 +84,7 @@ module AridCache
       end
 
       def is_mysql_adapter?
-        @is_mysql_adapter ||= ::ActiveRecord::Base.connection.adapter_name =~ /MySQL/i
+        @is_mysql_adapter ||= !!(::ActiveRecord::Base.connection.adapter_name =~ /MySQL/i)
       end
 
       def is_mysql_adapter=(value)
