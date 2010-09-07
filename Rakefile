@@ -59,10 +59,17 @@ Rake::RDocTask.new do |rdoc|
   rdoc.rdoc_files.include('lib/**/*.rb')
 end
 
-desc "Release a new patch version"
-task :release_new_version do
-  Rake::Task['version:bump:patch'].invoke
-  Rake::Task['github:release'].invoke
-  Rake::Task['git:release'].invoke
-  Rake::Task['gemcutter:release'].invoke
+namespace :release do
+  desc "Release a new patch version"
+  task :patch do
+    Rake::Task['version:bump:patch'].invoke
+    Rake::Task['release:current'].invoke
+  end
+
+  desc "Release the current version (after a manual version bump).  This rebuilds the gemspec, pushes the updated code, tags it and releases to RubyGems"
+  task :current do
+    Rake::Task['github:release'].invoke
+    Rake::Task['git:release'].invoke
+    Rake::Task['gemcutter:release'].invoke
+  end
 end

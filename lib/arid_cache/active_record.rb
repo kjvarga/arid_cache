@@ -1,19 +1,19 @@
 module AridCache
-  module ActiveRecord      
+  module ActiveRecord
     def self.included(base)
       base.extend         ClassMethods
       base.extend         MirrorMethods
       base.send :include, MirrorMethods
       base.class_eval do
-        alias_method_chain :method_missing, :arid_cache 
-        alias_method_chain :respond_to?,    :arid_cache 
+        alias_method_chain :method_missing, :arid_cache
+        alias_method_chain :respond_to?,    :arid_cache
       end
       class << base
-        alias_method_chain :method_missing, :arid_cache 
-        alias_method_chain :respond_to?,    :arid_cache 
+        alias_method_chain :method_missing, :arid_cache
+        alias_method_chain :respond_to?,    :arid_cache
       end
     end
-    
+
     module MirrorMethods
       def clear_caches
         AridCache.cache.clear_class_caches(self)
@@ -27,7 +27,7 @@ module AridCache
       def clear_instance_caches
         AridCache.cache.clear_instance_caches(self)
       end
-      
+
       # Return an AridCache key for the given key fragment for this object.
       #
       # Supported options:
@@ -60,7 +60,7 @@ module AridCache
           respond_to_without_arid_cache?(method, include_private)
         end
       end
-            
+
       protected
 
       def method_missing_with_arid_cache(method, *args, &block) #:nodoc:
@@ -72,24 +72,24 @@ module AridCache
         end
       end
     end
-    
+
     module ClassMethods
-      
+
       def instance_caches(opts={}, &block)
         AridCache::Store::InstanceCacheConfiguration.new(self, opts).instance_eval(&block) && nil
       end
 
       def class_caches(opts={}, &block)
-        AridCache::Store::ClassCacheConfiguration.new(self, opts).instance_eval(&block) && nil     
-      end  
+        AridCache::Store::ClassCacheConfiguration.new(self, opts).instance_eval(&block) && nil
+      end
 
       def is_mysql_adapter?
-        @is_mysql_adapter ||= ::ActiveRecord::Base.connection.adapter_name =~ /MySQL/
-      end  
-      
+        @is_mysql_adapter ||= ::ActiveRecord::Base.connection.adapter_name =~ /MySQL/i
+      end
+
       def is_mysql_adapter=(value)
         @is_mysql_adapter = value
-      end 
+      end
     end
   end
 end

@@ -366,6 +366,19 @@ class AridCacheTest < ActiveSupport::TestCase
     end
   end
 
+  test "should identify the MySQL2 adapter as a MySQL database" do
+    original_adapter_name = ::ActiveRecord::Base.connection.adapter_name
+    ::ActiveRecord::Base.connection.instance_eval { def adapter_name; "Mysql2"; end }
+    assert_equal ::ActiveRecord::Base.connection.adapter_name, "Mysql2"
+    assert ::ActiveRecord::Base.is_mysql_adapter?
+
+    # Restore it otherwise the other tests break
+    ::ActiveRecord::Base.connection.instance_eval { def adapter_name; "SQLite3"; end }
+    assert_equal ::ActiveRecord::Base.connection.adapter_name, "SQLite3"
+    ::ActiveRecord::Base.is_mysql_adapter = nil
+    assert !::ActiveRecord::Base.is_mysql_adapter?
+  end
+
   #
   # Tests requiring manual verification by looking at the SQL logs.
   # TODO move these to a separate class.
