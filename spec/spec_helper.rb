@@ -1,12 +1,27 @@
-$LOAD_PATH.unshift(File.dirname(__FILE__))
-$LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'lib'))
-require 'arid_cache'
-require 'spec'
+root_path = File.expand_path(File.join(File.dirname(__FILE__), '..'))
+$LOAD_PATH.unshift(File.join(root_path, '/test/lib')) # make requiring from test/lib easy
+
+require 'bundler/setup'
+Bundler.require
+
 require 'spec/autorun'
+require 'mock_rails'
 
-require 'rubygems'
-require 'will_paginate'
+Dir[File.expand_path(File.join(File.dirname(__FILE__),'support','**','*.rb'))].each {|f| require f}
 
-Spec::Runner.configure do |config|
+Spec::Runner.configure do |config|  
+  #include Blueprint::Helpers
+  include ActiveRecordQueryMatchers
   
+  config.mock_with :mocha
+  
+  config.before(:all) do 
+    Sham.reset(:before_all)
+  end
+  
+  config.before(:each) do 
+    Sham.reset(:before_each)
+    full_example_description = "#{self.class.description} #{@method_name}"
+    RAILS_DEFAULT_LOGGER.info("\n\n#{full_example_description}\n#{'-' * (full_example_description.length)}")
+  end
 end

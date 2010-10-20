@@ -1,3 +1,4 @@
+# Add support for expiring file-cache store.
 
 module ActiveSupport
   module Cache

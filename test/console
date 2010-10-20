@@ -1,8 +1,15 @@
-#!/usr/bin/env ruby
-irb = RUBY_PLATFORM =~ /(:?mswin|mingw)/ ? 'irb.bat' : 'irb'
-libs = []
+$LOAD_PATH.unshift(File.join(File.dirname(__FILE__), 'lib'))
 
-libs << 'irb/completion'
-libs << 'test_helper'
+require 'rubygems'
+require 'bundler/setup'
+Bundler.require
+require 'mock_rails'
+require 'blueprint'
+require 'irb'
 
-exec "#{irb} -Ilib:test#{libs.map{ |l| " -r #{l}" }.join} --simple-prompt"
+WillPaginate.enable_activerecord
+AridCache.init_rails
+Blueprint.seeds
+
+ARGV.clear
+IRB.start
