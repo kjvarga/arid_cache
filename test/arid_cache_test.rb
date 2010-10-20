@@ -76,7 +76,7 @@ class AridCacheTest < ActiveSupport::TestCase
   end
 
   test "passes on options to find" do
-    actual = @user.cached_companies(:order => 'users.id DESC')
+    actual = @user.cached_companies(:order => 'users.id DESC', :include => [:owner])
     expected = @user.companies
     assert_equal expected, actual
     assert_equal expected.first, actual.first

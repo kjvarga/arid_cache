@@ -9,6 +9,7 @@ require 'active_support/test_case'
 
 require 'mock_rails'
 require 'blueprint'
+require 'add_query_counting_to_active_record'
 
 WillPaginate.enable_activerecord
 AridCache.init_rails

@@ -6,8 +6,6 @@ ActiveRecord::Base.establish_connection(
   :database => ":memory:"
 )
 
-require 'add_query_counting_to_active_record'
-
 # Schema
 ActiveRecord::Base.silence do
   ActiveRecord::Migration.verbose = false

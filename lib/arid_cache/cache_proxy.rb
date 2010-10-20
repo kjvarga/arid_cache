@@ -68,6 +68,11 @@ module AridCache
 
       self.cache_key = object.arid_cache_key(key, opts_for_cache_key)
       self.cached = Rails.cache.read(cache_key, opts_for_cache)
+      self.klass = if self.cached && self.cached.is_a?(AridCache::CacheProxy::Result) # infer class of the results to return
+        self.cached.klass
+      else
+        object_base_class
+      end
     end
 
     def fetch_count
@@ -89,10 +94,6 @@ module AridCache
         execute_find
       elsif cached.is_a?(AridCache::CacheProxy::Result)
         if cached.has_ids?
-
-          # Infer the class of the objects we are returning
-          self.klass = cached.klass || object_base_class
-
           fetch_from_cache
         else
           execute_find
@@ -116,11 +117,9 @@ module AridCache
         if paginate?
 
           # Return a paginated collection
-
           if cached.ids.empty?
 
             # No ids, return an empty WillPaginate result
-
             [].paginate(opts_for_paginate)
 
           elsif combined_options.include?(:order)
@@ -128,14 +127,12 @@ module AridCache
             # An order has been specified.  We have to go to the database
             # and paginate there because the contents of the requested
             # page will be different.
-
             klass.paginate(cached.ids, { :total_entries => cached.ids.size }.merge(opts_for_find.merge(opts_for_paginate)))
 
           else
 
             # Order is unchanged.  We can paginate in memory and only select
             # those ids that we actually need.  This is the most efficient.
-
             paged_ids = cached.ids.paginate(opts_for_paginate)
             paged_ids.replace(klass.find_all_by_id(paged_ids, opts_for_find(paged_ids)))
 
@@ -146,13 +143,11 @@ module AridCache
           # We are returning a regular (non-paginated) result.
           # If we don't have any ids, that's an empty result
           # in any language.
-
           []
 
         elsif combined_options.include?(:order)
 
           # An order has been specified, so use it.
-
           klass.find_all_by_id(cached.ids, opts_for_find)
 
         else
@@ -160,7 +155,6 @@ module AridCache
           # No order has been specified, so we have to maintain
           # the current order.  We do this by passing some extra
           # SQL which orders by the current array ordering.
-
           offset, limit = combined_options.delete(:offset) || 0, combined_options.delete(:limit) || cached.count
           ids = cached.ids[offset, limit]
 
@@ -201,7 +195,14 @@ module AridCache
         Rails.cache.write(cache_key, cached, opts_for_cache)
 
         self.cached = cached
-        return_records(records)
+        # An order has been specified.  We have to go to the database
+        # to order because we can't be sure that the current order is the same as the cache.
+        if cached.is_a?(AridCache::CacheProxy::Result) && combined_options.include?(:order)
+          self.klass = self.cached.klass # TODO used by fetch_from_cache needs refactor
+          fetch_from_cache
+        else
+          process_result_in_memory(records)
+        end
       end
 
       # Convert records to an array before calling paginate.  If we don't do this
@@ -222,7 +223,7 @@ module AridCache
       # to define it in a block and have a new cache for it:
       #
       # model.my_special_collection { the_collection(:order => 'new order', :limit => 10) }
-      def return_records(records)
+      def process_result_in_memory(records)
         if opts.include?(:page)
           records = records.respond_to?(:to_a) ? records.to_a : records
           records.respond_to?(:paginate) ? records.paginate(opts_for_paginate) : records
