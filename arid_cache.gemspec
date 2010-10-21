@@ -5,11 +5,11 @@
 
 Gem::Specification.new do |s|
   s.name = %q{arid_cache}
-  s.version = "1.0.2"
+  s.version = "1.0.3"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Karl Varga"]
-  s.date = %q{2010-09-07}
+  s.date = %q{2010-10-21}
   s.description = %q{AridCache makes caching easy and effective.  AridCache supports caching on all your model named scopes, class methods and instance methods right out of the box.  AridCache prevents caching logic from cluttering your models and clarifies your logic by making explicit calls to cached result sets.
 AridCache is designed for handling large, expensive ActiveRecord collections but is equally useful for caching anything else as well.
 }
@@ -20,6 +20,8 @@ AridCache is designed for handling large, expensive ActiveRecord collections but
   ]
   s.files = [
     ".gitignore",
+     "Gemfile",
+     "Gemfile.lock",
      "LICENSE",
      "README.rdoc",
      "Rakefile",
@@ -35,17 +37,21 @@ AridCache is designed for handling large, expensive ActiveRecord collections but
      "spec/arid_cache_spec.rb",
      "spec/spec.opts",
      "spec/spec_helper.rb",
+     "spec/support/ar_query.rb",
+     "spec/support/custom_methods.rb",
+     "spec/support/matchers.rb",
      "tasks/arid_cache_tasks.rake",
      "test/arid_cache_test.rb",
      "test/console",
-     "test/db/prepare.rb",
-     "test/db/schema.rb",
-     "test/lib/active_support/cache/file_store_extras.rb",
+     "test/lib/add_query_counting_to_active_record.rb",
      "test/lib/blueprint.rb",
+     "test/lib/db_prepare.rb",
+     "test/lib/fix_active_support_file_store_expires_in.rb",
+     "test/lib/mock_rails.rb",
+     "test/lib/models/company.rb",
+     "test/lib/models/empty_user_relation.rb",
+     "test/lib/models/user.rb",
      "test/log/.gitignore",
-     "test/models/company.rb",
-     "test/models/empty_user_relation.rb",
-     "test/models/user.rb",
      "test/test_helper.rb"
   ]
   s.homepage = %q{http://github.com/kjvarga/arid_cache}
@@ -56,14 +62,18 @@ AridCache is designed for handling large, expensive ActiveRecord collections but
   s.test_files = [
     "spec/arid_cache_spec.rb",
      "spec/spec_helper.rb",
+     "spec/support/ar_query.rb",
+     "spec/support/custom_methods.rb",
+     "spec/support/matchers.rb",
      "test/arid_cache_test.rb",
-     "test/db/prepare.rb",
-     "test/db/schema.rb",
-     "test/lib/active_support/cache/file_store_extras.rb",
+     "test/lib/add_query_counting_to_active_record.rb",
      "test/lib/blueprint.rb",
-     "test/models/company.rb",
-     "test/models/empty_user_relation.rb",
-     "test/models/user.rb",
+     "test/lib/db_prepare.rb",
+     "test/lib/fix_active_support_file_store_expires_in.rb",
+     "test/lib/mock_rails.rb",
+     "test/lib/models/company.rb",
+     "test/lib/models/empty_user_relation.rb",
+     "test/lib/models/user.rb",
      "test/test_helper.rb"
   ]
 
