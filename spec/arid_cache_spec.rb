@@ -1,6 +1,6 @@
 require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 
-describe "AridCache" do
+describe AridCache do
   describe 'results' do
     before :each do
       Company.destroy_all

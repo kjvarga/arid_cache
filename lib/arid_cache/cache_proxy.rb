@@ -312,13 +312,19 @@ module AridCache
       #
       # TODO: is it quicker to sort in memory?
       def preserve_order(ids)
+        column = if self.klass.respond_to?(:table_name)
+          ::ActiveRecord::Base.connection.quote_table_name(self.klass.table_name) + '.id'
+        else
+          "id"
+        end
+
         if ids.empty?
           nil
         elsif ::ActiveRecord::Base.is_mysql_adapter?
-          "FIELD(id,#{ids.join(',')})"
+          "FIELD(#{column},#{ids.join(',')})"
         else
           order = ''
-          ids.each_index { |i| order << "WHEN id=#{ids[i]} THEN #{i+1} " }
+          ids.each_index { |i| order << "WHEN #{column}=#{ids[i]} THEN #{i+1} " }
           "CASE " + order + " END"
         end
       end
