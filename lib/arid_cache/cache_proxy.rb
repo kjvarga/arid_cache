@@ -89,17 +89,26 @@ module AridCache
       end
     end
 
+    # Return a list of records using the options provided.  If the item in the cache
+    # is not a CacheProxy::Result it is returned as-is.  If there is nothing in the cache
+    # the block defining the cache is exectued.  If the :raw option is true, returns the
+    # CacheProxy::Result unmodified, ignoring other options, except where those options
+    # are used to initialize the cache.
     def fetch
-      if refresh_cache?
-        execute_find
+      @raw_result = self.combined_options[:raw] == true
+
+      result = if refresh_cache?
+        execute_find(@raw_result)
       elsif cached.is_a?(AridCache::CacheProxy::Result)
-        if cached.has_ids?
-          fetch_from_cache
-        else
-          execute_find
+        if cached.has_ids? && @raw_result
+          self.cached         # return it unmodified
+        elsif cached.has_ids?
+          fetch_from_cache    # return a list of active records after applying options
+        else                  # true if we have only calculated the count thus far
+          execute_find(@raw_result)
         end
       else
-        cached # some base type, return it
+        cached                # some base type, return it unmodified
       end
     end
 
@@ -175,7 +184,14 @@ module AridCache
         self.records = block.nil? ? object.instance_eval(key) : object.instance_eval(&block)
       end
 
-      def execute_find
+      # Seed the cache by executing the stored block (or by calling a method on the object).
+      # Then apply any options like pagination or ordering before returning the result, which
+      # is either some base type, or usually, a list of active records.
+      #
+      # Options:
+      #   raw  - if true, return the CacheProxy::Result after seeding the cache, ignoring
+      #          other options. Default is false.
+      def execute_find(raw = false)
         get_records
         cached = AridCache::CacheProxy::Result.new
 
@@ -193,8 +209,11 @@ module AridCache
           end
         end
         Rails.cache.write(cache_key, cached, opts_for_cache)
-
         self.cached = cached
+
+        # Return the raw result?
+        return self.cached if raw
+
         # An order has been specified.  We have to go to the database
         # to order because we can't be sure that the current order is the same as the cache.
         if cached.is_a?(AridCache::CacheProxy::Result) && combined_options.include?(:order)

@@ -1,5 +1,5 @@
 root_path = File.expand_path(File.join(File.dirname(__FILE__), '..'))
-$LOAD_PATH.unshift(File.join(root_path, '/test/lib')) # make requiring from test/lib easy
+$LOAD_PATH.unshift(File.join(root_path, '/test/lib')) # add test/lib to the load path
 
 require 'bundler/setup'
 Bundler.require
