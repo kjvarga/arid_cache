@@ -43,38 +43,25 @@ module AridCache
       Rails.cache.delete_matched(%r[arid-cache-#{key}.*])
     end
 
-    #
-    # Fetching results
-    #
-
-    def self.fetch_count(object, key, opts={}, &block)
-      CacheProxy.new(object, key, opts, &block).fetch_count
-    end
-
-    def self.fetch(object, key, opts={}, &block)
-      CacheProxy.new(object, key, opts, &block).fetch
-    end
-
-    def initialize(object, key, opts, &block)
+    def initialize(object, key, opts={}, &block)
       self.object = object
       self.key = key
-      self.opts = opts.symbolize_keys || {}
+      self.opts = opts.symbolize_keys
       self.blueprint = AridCache.store.find(object, key)
       self.block = block
       self.records = nil
 
       # The options from the blueprint merged with the options for this call
       self.combined_options = self.blueprint.nil? ? self.opts : self.blueprint.opts.merge(self.opts)
-
       self.cache_key = object.arid_cache_key(key, opts_for_cache_key)
-      self.cached = Rails.cache.read(cache_key, opts_for_cache)
-      self.klass = if self.cached && self.cached.is_a?(AridCache::CacheProxy::Result) # infer class of the results to return
-        self.cached.klass
-      else
-        object_base_class
-      end
     end
 
+    #
+    # Fetching results
+    #
+
+    # Return a count of ids in the cache, or return whatever is in the cache if it is
+    # not a CacheProxy::Result
     def fetch_count
       if refresh_cache?
         execute_count
@@ -95,7 +82,7 @@ module AridCache
     # CacheProxy::Result unmodified, ignoring other options, except where those options
     # are used to initialize the cache.
     def fetch
-      @raw_result = self.combined_options[:raw] == true
+      @raw_result = opts_for_cache_proxy[:raw] == true
 
       result = if refresh_cache?
         execute_find(@raw_result)
@@ -111,6 +98,29 @@ module AridCache
         cached                # some base type, return it unmodified
       end
     end
+
+    # Clear the cached result for this cache only
+    def clear_cached
+      Rails.cache.delete(self.cache_key, opts_for_cache)
+    end
+
+    # Return the cached result for this object's key
+    def cached
+      @cached ||= Rails.cache.read(self.cache_key, opts_for_cache)
+    end
+
+    # Return the class of the cached results i.e. if the cached result is a
+    # list of Album records, then klass returns Album.  If there is nothing
+    # in the cache, then the class is inferred to be the class of the object
+    # that the cached method is being called on.
+    def klass
+      @klass ||= if self.cached && self.cached.is_a?(AridCache::CacheProxy::Result)
+        self.cached.klass
+      else
+        object_base_class
+      end
+    end
+
 
     private
 
@@ -317,6 +327,13 @@ module AridCache
 
       def opts_for_cache_key
         combined_options.reject { |k,v| !OPTIONS_FOR_CACHE_KEY.include?(k) }
+      end
+
+      OPTIONS_FOR_CACHE_PROXY = [:raw, :clear]
+
+      # Returns options that affect the cache proxy result
+      def opts_for_cache_proxy
+        combined_options.reject { |k,v| !OPTIONS_FOR_CACHE_PROXY.include?(k) }
       end
 
       def object_base_class #:nodoc:

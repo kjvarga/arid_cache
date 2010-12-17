@@ -52,5 +52,44 @@ describe AridCache::CacheProxy do
       Rails.cache.expects(:read).with(@user.arid_cache_key(:companies), {})
       @user.cached_companies(:raw => true)
     end
+
+    it "should work for calls to a method that ends with _count" do
+      @user.cached_bogus_count do
+        10
+      end
+      @user.cached_bogus_count(:raw => true).should == 10
+    end
+
+    it "should work for calls to a method that ends with _count" do
+      @user.cached_companies_count(:raw => true).should == @user.cached_companies_count
+    end
+  end
+
+  describe "with clear => true" do
+    before :each do
+      @user = User.make
+      @user.companies << Company.make
+      @user.companies << Company.make
+      @user.clear_instance_caches rescue Rails.cache.clear
+    end
+
+    it "should not fail if there is no cached value" do
+      lambda { @user.cached_companies(:clear => true) }.should_not raise_exception
+    end
+
+    it "should clear the cached entry" do
+      key = @user.arid_cache_key(:companies)
+      @user.cached_companies
+      Rails.cache.read(key).should_not be_nil
+      @user.cached_companies(:clear => true)
+      Rails.cache.read(key).should be_nil
+    end
+
+    it "should not read from the cache or database" do
+      Rails.cache.expects(:read).never
+      lambda {
+        @user.cached_companies(:clear => true)
+      }.should query(0)
+    end
   end
 end

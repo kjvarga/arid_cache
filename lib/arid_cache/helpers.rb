@@ -63,12 +63,19 @@ module AridCache
 
     private
 
+    # Dynamically define a method on the object's class to return cached results
     def method_for_cached(object, key, fetch_method=:fetch, method_name=nil)
       method_name = ("cached_" + (method_name || key)).gsub(/[^\w\!\?]/, '_')
       method_body = <<-END
         def #{method_name}(*args, &block)
           opts = args.empty? ? {} : args.first
-          AridCache.cache.send(#{fetch_method.inspect}, self, #{key.inspect}, opts, &block)
+
+          proxy = AridCache::CacheProxy.new(self, #{key.inspect}, opts, &block)
+          if opts[:clear] == true
+            proxy.clear_cached
+          else
+            proxy.#{fetch_method.to_s}
+          end
         end
       END
       # Get the correct object

@@ -331,11 +331,11 @@ class AridCacheTest < ActiveSupport::TestCase
 
   test "should support calling store methods directly with a block" do
     assert_nothing_raised do
-      AridCache.cache.fetch(@user, 'my-fancy-key') do
+      AridCache.cache.new(@user, 'my-fancy-key') do
         companies
-      end
+      end.fetch
     end
-    assert_equal @user.companies.all(:order => 'name DESC'), AridCache.cache.fetch(@user, 'my-fancy-key', :order => 'name DESC') { companies }
+    assert_equal @user.companies.all(:order => 'name DESC'), AridCache.cache.new(@user, 'my-fancy-key', :order => 'name DESC') { companies }.fetch
   end
 
   test "empty user relation should be empty" do
@@ -371,14 +371,14 @@ class AridCacheTest < ActiveSupport::TestCase
     ::ActiveRecord::Base.connection.instance_eval { def adapter_name; "Mysql2"; end }
     assert_equal "Mysql2", ::ActiveRecord::Base.connection.adapter_name
     assert_equal true, ::ActiveRecord::Base.is_mysql_adapter?
-    
+
     # Restore it otherwise the other tests break
     ::ActiveRecord::Base.connection.instance_eval { def adapter_name; "SQLite3"; end }
     assert_equal "SQLite3", ::ActiveRecord::Base.connection.adapter_name
     ::ActiveRecord::Base.is_mysql_adapter = nil
     assert_equal false, ::ActiveRecord::Base.is_mysql_adapter?
   end
-  
+
   #
   # Tests requiring manual verification by looking at the SQL logs.
   # TODO move these to a separate class.
