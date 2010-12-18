@@ -5,11 +5,11 @@
 
 Gem::Specification.new do |s|
   s.name = %q{arid_cache}
-  s.version = "1.0.4"
+  s.version = "1.1.0"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Karl Varga"]
-  s.date = %q{2010-10-29}
+  s.date = %q{2010-12-17}
   s.description = %q{AridCache makes caching easy and effective.  AridCache supports caching on all your model named scopes, class methods and instance methods right out of the box.  AridCache prevents caching logic from cluttering your models and clarifies your logic by making explicit calls to cached result sets.
 AridCache is designed for handling large, expensive ActiveRecord collections but is equally useful for caching anything else as well.
 }
@@ -21,7 +21,6 @@ AridCache is designed for handling large, expensive ActiveRecord collections but
   s.files = [
     ".gitignore",
      "Gemfile",
-     "Gemfile.lock",
      "LICENSE",
      "README.rdoc",
      "Rakefile",
@@ -35,13 +34,13 @@ AridCache is designed for handling large, expensive ActiveRecord collections but
      "lib/arid_cache/store.rb",
      "rails/init.rb",
      "spec/arid_cache/arid_cache_spec.rb",
+     "spec/arid_cache/cache_proxy_result_spec.rb",
      "spec/arid_cache/cache_proxy_spec.rb",
      "spec/spec.opts",
      "spec/spec_helper.rb",
      "spec/support/ar_query.rb",
      "spec/support/custom_methods.rb",
      "spec/support/matchers.rb",
-     "tasks/arid_cache_tasks.rake",
      "test/arid_cache_test.rb",
      "test/console",
      "test/lib/add_query_counting_to_active_record.rb",
@@ -62,6 +61,7 @@ AridCache is designed for handling large, expensive ActiveRecord collections but
   s.summary = %q{Automates efficient caching of your ActiveRecord collections, gives you counts for free and supports pagination.}
   s.test_files = [
     "spec/arid_cache/arid_cache_spec.rb",
+     "spec/arid_cache/cache_proxy_result_spec.rb",
      "spec/arid_cache/cache_proxy_spec.rb",
      "spec/spec_helper.rb",
      "spec/support/ar_query.rb",
