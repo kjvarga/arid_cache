@@ -4,14 +4,6 @@ module AridCache
       base.extend         ClassMethods
       base.extend         MirrorMethods
       base.send :include, MirrorMethods
-      base.class_eval do
-        alias_method_chain :method_missing, :arid_cache
-        alias_method_chain :respond_to?,    :arid_cache
-      end
-      class << base
-        alias_method_chain :method_missing, :arid_cache
-        alias_method_chain :respond_to?,    :arid_cache
-      end
     end
 
     module MirrorMethods
@@ -49,26 +41,26 @@ module AridCache
         'arid-cache-' + object_key + '-' + key.to_s
       end
 
-      def respond_to_with_arid_cache?(method, include_private = false) #:nodoc:
+      def respond_to?(method, include_private = false) #:nodoc:
         if (method.to_s =~ /^cached_.*(_count)?$/).nil?
-          respond_to_without_arid_cache?(method, include_private)
+          super(method, include_private)
         elsif method.to_s =~ /^cached_(.*)_count$/
           AridCache.store.has?(self, "#{$1}_count") || AridCache.store.has?(self, $1) || super("#{$1}_count", include_private) || super($1, include_private)
         elsif method.to_s =~ /^cached_(.*)$/
           AridCache.store.has?(self, $1) || super($1, include_private)
         else
-          respond_to_without_arid_cache?(method, include_private)
+          super
         end
       end
 
       protected
 
-      def method_missing_with_arid_cache(method, *args, &block) #:nodoc:
+      def method_missing(method, *args, &block) #:nodoc:
         if method.to_s =~ /^cached_(.*)$/
           opts = args.empty? ? {} : args.first
           AridCache.lookup(self, $1, opts, &block)
         else
-          method_missing_without_arid_cache(method, *args)
+          super
         end
       end
     end
