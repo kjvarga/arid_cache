@@ -2,6 +2,7 @@ $LOAD_PATH.unshift(File.join(File.dirname(__FILE__), 'lib')) # make requiring fr
 
 require 'fileutils'
 require 'rubygems'
+require 'thread'
 require 'bundler/setup'
 Bundler.require
 require 'test/unit' # required by ActiveSupport::TestCase

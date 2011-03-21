@@ -1,4 +1,5 @@
 require 'rubygems'
+require 'thread'
 require 'bundler/setup'
 Bundler.require
 
@@ -38,8 +39,6 @@ Spec::Rake::SpecTask.new(:rcov) do |spec|
   spec.rcov = true
 end
 
-task :spec => :check_dependencies
-
 require 'rake/testtask'
 Rake::TestTask.new(:test) do |test|
   test.libs << 'lib' << 'test'
@@ -47,7 +46,6 @@ Rake::TestTask.new(:test) do |test|
   test.verbose = true
 end
 
-task :test => :check_dependencies
 task :default => :test
 
 require 'rake/rdoctask'
