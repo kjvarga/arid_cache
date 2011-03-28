@@ -5,7 +5,7 @@ require 'arid_cache/helpers'
 require 'arid_cache/store'
 require 'arid_cache/active_record'
 require 'arid_cache/cache_proxy'
-require 'arid_cache/railtie'
+require 'arid_cache/railtie' if defined?(Rails)
 
 module AridCache
   extend AridCache::Helpers
