@@ -8,6 +8,7 @@ AridCache simplifies caching by supporting auto-expiring cache keys - as well as
 
 == Changes
 
+v1.2.0: Fix Rails 3 ActiveRecord hooks & remove some Rails dependencies
 v1.0.5: Support <tt>:raw</tt> and <tt>:clear</tt> options.
 
 == Install
@@ -21,10 +22,6 @@ Add the gem to your `Gemfile`
 Then
 
   bundle install
-
-For some reason AridCache is not being included into ActiveRecord, so add the following to an initializer to get around that until I fix it:
-
-  AridCache.init_rails
 
 <b>Rails 2:</b>
 
@@ -353,7 +350,7 @@ In some circumstances - like when you are querying on a named scope - if you hav
 == Compatibility
 
 Tested on Ruby 1.8.6, 1.8.7, REE 1.8.7 and 1.9.1.
-Tested in Rails 2.3.* and Rails 3
+Tested in Rails 2.3.11, Rails 3.0.0, Rails 3.0.5
 
 For Ruby < 1.8.7 you probably want to include the following to extend the Array class with a <tt>count</tt> method.  Otherwise your <tt>cached_<key>_count</tt> calls probably won't work:
 
