@@ -39,7 +39,7 @@ module AridCache
     end
 
     def self.clear_instance_caches(object)
-      key = (object.is_a?(Class) ? object : object.class).name.pluralize.downcase
+      key = AridCache::Inflector.pluralize((object.is_a?(Class) ? object : object.class).name).downcase
       Rails.cache.delete_matched(%r[arid-cache-#{key}.*])
     end
 
