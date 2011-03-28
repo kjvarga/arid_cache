@@ -359,10 +359,6 @@ For Ruby < 1.8.7 you probably want to include the following to extend the Array 
 
   Array.class_eval { alias count size }
 
-For Rails 3 for some reason AridCache is not being included into ActiveRecord, so add the following to an initializer to get around that:
-
-  AridCache.init_rails
-
 == Resources & Metrics
 
 

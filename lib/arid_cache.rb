@@ -5,6 +5,7 @@ require 'arid_cache/helpers'
 require 'arid_cache/store'
 require 'arid_cache/active_record'
 require 'arid_cache/cache_proxy'
+require 'arid_cache/railtie'
 
 module AridCache
   extend AridCache::Helpers
