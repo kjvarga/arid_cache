@@ -10,7 +10,7 @@ require 'arid_cache/inflector'
 
 module AridCache
   extend AridCache::Helpers
-  class Error < StandardError; end #:nodoc:
+  Error = Class.new(StandardError) #:nodoc:
 
   def self.cache
     AridCache::CacheProxy
