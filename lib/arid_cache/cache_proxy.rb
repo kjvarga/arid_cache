@@ -4,8 +4,6 @@ require 'artd_cache/cache_proxy/result'
 module AridCache
   class CacheProxy
 
-    attr_accessor :cached
-
     # AridCache::CacheProxy::CachedActiveRecordResult
     #
     # This struct is stored in the cache and stores information about a
@@ -52,6 +50,10 @@ module AridCache
       Rails.cache.delete_matched(%r[arid-cache-#{key}.*])
     end
 
+    #
+    # Initialize
+    #
+
     def initialize(receiver, method, opts={}, &block)
       @receiver = receiver
       @method = method
@@ -62,6 +64,7 @@ module AridCache
       opts = opts.symbolize_keys
       @options = Options.new(@blueprint.nil? ? opts : @blueprint.opts.merge(opts))
       @cache_key = @receiver.arid_cache_key(@method, @options.opts_for_cache_key)
+      @cached = Rails.cache.read(@cache_key, @options.opts_for_cache)
     end
 
     #
@@ -71,16 +74,16 @@ module AridCache
     # Return a count of ids in the cache, or return whatever is in the cache if it is
     # not a CacheProxy::CachedActiveRecordResult
     def fetch_count
-      if refresh_cache?
+      if @cached.nil? || @options.force?
         execute_count
-      elsif cached.is_a?(AridCache::CacheProxy::CachedActiveRecordResult)
-        cached.has_count? ? cached.count : execute_count
-      elsif cached.is_a?(Fixnum)
-        cached
-      elsif cached.respond_to?(:count)
-        cached.count
+      elsif @cached.is_a?(CachedActiveRecordResult)
+        @cached.has_count? ? @cached.count : execute_count
+      elsif @cached.is_a?(Fixnum)
+        @cached
+      elsif @cached.respond_to?(:count)
+        @cached.count
       else
-        cached # what else can we do? return it
+        @cached # what else can we do? return it
       end
     end
 
@@ -90,21 +93,26 @@ module AridCache
     # CacheProxy::CachedActiveRecordResult unmodified, ignoring other options, except where those options
     # are needed to initialize the cache.
     def fetch
-      result = if refresh_cache?
-        execute_find.process(opts)
-      elsif cached.is_a?(AridCache::CacheProxy::CachedActiveRecordResult)
-        if cached.has_ids? && @options.raw?
-          self.cached         # return it unmodified
-        elsif cached.has_ids?
-          ids = process_enumerable(cached.ids)  # limit and paginate the ids array
+      if @cached.nil? || @options.force?
+        seed_cache
+      else
+        Result.new(@cached, @options)
+      end.process(opts)
+
+      # TODO verify
+      elsif @cached.is_a?(CachedActiveRecordResult)
+        if @cached.has_ids? && @options.raw?
+          @cached                               # return it unmodified
+        elsif @cached.has_ids?
+          ids = .process(opts)
           fetch_activerecords(ids)              # select only the records we need
         else                                    # true when we have only calculated the count
-          execute_find.process(opts)
+          seed_cache.process(opts)
         end
-      elsif cached.is_a?(Enumerable)
-        process_enumerable(cached)              # process enumerable in memory
+      elsif @cached.is_a?(Enumerable)
+        Result.new(@cached).process(opts)    # process enumerable in memory
       else
-        cached                                  # base type, return as is
+        @cached                                  # base type, return as is
       end
     end
 
@@ -113,26 +121,21 @@ module AridCache
       Rails.cache.delete(@cache_key, @options.opts_for_cache)
     end
 
-    # Return the cached result for this object's key
-    def cached
-      @cached ||= Rails.cache.read(@cache_key, @options.opts_for_cache)
-    end
-
-    # Return the class of the cached results i.e. if the cached result is a
-    # list of Album records, then klass returns Album.  If there is nothing
-    # in the cache, then the class is inferred to be the class of the object
-    # that the cached method is being called on.
-    def result_klass
-      @result_klass ||= if self.cached && self.cached.is_a?(AridCache::CacheProxy::CachedActiveRecordResult)
-        self.cached.klass
-      else
-        Utilities.object_class(@receiver)
-      end
-    end
-
     private
 
-      include AridCache::CacheProxy::OptionsHelpers
+      include OptionsHelpers
+
+      # Return the class of the cached results i.e. if the cached result is a
+      # list of Album records, then klass returns Album.  If there is nothing
+      # in the cache, then the class is inferred to be the class of the object
+      # that the cached method is being called on.
+      def result_klass
+        @result_klass ||= if @cached && @cached.is_a?(CachedActiveRecordResult)
+          @cached.klass
+        else
+          Utilities.object_class(@receiver)
+        end
+      end
 
       # Return a list of records from the database using the ids from
       # the cached CachedActiveRecordResult.
@@ -188,10 +191,6 @@ module AridCache
         end
       end
 
-      def refresh_cache?
-        cached.nil? || @options.force?
-      end
-
       # Return a CacheProxy::Result containing the result of calling the proc on the receiver.
       def get_result_from_block
         block = @block || (@blueprint && @blueprint.proc)
@@ -200,7 +199,7 @@ module AridCache
 
       # Seed the cache by executing the stored block (or by calling a method on the object)
       # and storing the result in the cache.  Return a Result object.
-      def execute_find
+      def seed_cache
         @records = get_result_from_block
         @cached = @records.to_cache
         @cached.klass = Utilities.object_class(@receiver) if @cached.is_a?(CachedActiveRecordResult) && @cached.klass.nil?
@@ -211,7 +210,7 @@ module AridCache
 
       def execute_count
         @result = get_result_from_block
-        @cached = AridCache::CacheProxy::CachedActiveRecordResult.new
+        @cached = CachedActiveRecordResult.new
 
         # Just get the count if we can.
         #
@@ -235,7 +234,7 @@ module AridCache
         end
 
         write_cache(cached)
-        self.cached = cached
+        @cached = cached
         cached.respond_to?(:count) ? cached.count : cached
       end
 

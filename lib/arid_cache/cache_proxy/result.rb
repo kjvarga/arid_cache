@@ -8,7 +8,7 @@ module AridCache
     # and especially those containing active records.
     class Result
 
-      def initialize(result, options)
+      def initialize(result, options=nil)
         @result = result
         @options = options
       end
@@ -54,7 +54,9 @@ module AridCache
       # Options:
       #   raw  - if true, return the CacheProxy::CachedActiveRecordResult after seeding the cache, ignoring
       #          other options. Default is false.
-      def process
+      def process(options=nil)
+        @options ||= options
+        
         # raw, not enumerable, or empty, return it as is
         return @result if @options.raw? || !is_enumerable? || is_empty?
         
