@@ -5,12 +5,11 @@ module AridCache
 
     attr_accessor :object, :key, :opts, :blueprint, :cached, :cache_key, :block, :records, :combined_options, :klass
 
-    # AridCache::CacheProxy::Result
+    # AridCache::CacheProxy::CachedActiveRecordResult
     #
-    # This struct is stored in the cache and stores information we need
-    # to re-query for results.
-    Result = Struct.new(:ids, :klass, :count) do
-
+    # This struct is stored in the cache and stores information about a
+    # collection of ActiveRecords.
+    CachedActiveRecordResult = Struct.new(:ids, :klass, :count) do
       def has_count?
         !count.nil?
       end
@@ -27,6 +26,12 @@ module AridCache
         self['klass'].constantize unless self['klass'].nil?
       end
     end
+
+    OPTIONS_FOR_PAGINATE = [:page, :per_page, :total_entries, :finder]
+    OPTIONS_FOR_CACHE_PROXY = [:raw, :clear]
+    OPTIONS_FOR_FIND = [ :conditions, :include, :joins, :limit, :offset, :order, :select, :readonly, :group, :having, :from, :lock ]
+    OPTIONS_FOR_CACHE = [ :expires_in ]
+    OPTIONS_FOR_CACHE_KEY = [ :auto_expire ]
 
     #
     # Managing your caches
@@ -64,11 +69,11 @@ module AridCache
     #
 
     # Return a count of ids in the cache, or return whatever is in the cache if it is
-    # not a CacheProxy::Result
+    # not a CacheProxy::CachedActiveRecordResult
     def fetch_count
       if refresh_cache?
         execute_count
-      elsif cached.is_a?(AridCache::CacheProxy::Result)
+      elsif cached.is_a?(AridCache::CacheProxy::CachedActiveRecordResult)
         cached.has_count? ? cached.count : execute_count
       elsif cached.is_a?(Fixnum)
         cached
@@ -80,25 +85,28 @@ module AridCache
     end
 
     # Return a list of records using the options provided.  If the item in the cache
-    # is not a CacheProxy::Result it is returned as-is.  If there is nothing in the cache
+    # is not a CacheProxy::CachedActiveRecordResult it is returned after applying options.  If there is nothing in the cache
     # the block defining the cache is exectued.  If the :raw option is true, returns the
-    # CacheProxy::Result unmodified, ignoring other options, except where those options
-    # are used to initialize the cache.
+    # CacheProxy::CachedActiveRecordResult unmodified, ignoring other options, except where those options
+    # are needed to initialize the cache.
     def fetch
       @raw_result = opts_for_cache_proxy[:raw] == true
 
       result = if refresh_cache?
         execute_find(@raw_result)
-      elsif cached.is_a?(AridCache::CacheProxy::Result)
+      elsif cached.is_a?(AridCache::CacheProxy::CachedActiveRecordResult)
         if cached.has_ids? && @raw_result
           self.cached         # return it unmodified
         elsif cached.has_ids?
-          fetch_from_cache    # return a list of active records after applying options
-        else                  # true if we have only calculated the count thus far
+          ids = process_enumerable(cached.ids)  # limit and paginate the ids array
+          fetch_activerecords(ids)              # select only the records we need
+        else                                    # true when we have only calculated the count
           execute_find(@raw_result)
         end
+      elsif cached.is_a?(Enumerable)
+        process_enumerable(cached)              # process enumerable in memory
       else
-        cached                # some base type, return it unmodified
+        cached                                  # base type, return as is
       end
     end
 
@@ -117,7 +125,7 @@ module AridCache
     # in the cache, then the class is inferred to be the class of the object
     # that the cached method is being called on.
     def klass
-      @klass ||= if self.cached && self.cached.is_a?(AridCache::CacheProxy::Result)
+      @klass ||= if self.cached && self.cached.is_a?(AridCache::CacheProxy::CachedActiveRecordResult)
         self.cached.klass
       else
         object_base_class
@@ -129,14 +137,17 @@ module AridCache
       include AridCache::CacheProxy::OptionsHelpers
 
       # Return a list of records from the database using the ids from
-      # the cached Result.
+      # the cached CachedActiveRecordResult.
       #
       # The result is paginated if the :page option is preset, otherwise
       # a regular list of ActiveRecord results is returned.
       #
       # If no :order is specified, the current ordering of the ids is
       # preserved with some fancy SQL.
-      def fetch_from_cache
+      #
+      # Call only when the list of records is not empty and an order option
+      # has been specified and it is not a Proc.
+      def fetch_activerecords
         if paginate?
 
           # Return a paginated collection
@@ -160,13 +171,6 @@ module AridCache
             paged_ids.replace(klass.find_all_by_id(paged_ids, opts_for_find(paged_ids)))
 
           end
-
-        elsif cached.ids.empty?
-
-          # We are returning a regular (non-paginated) result.
-          # If we don't have any ids, that's an empty result
-          # in any language.
-          []
 
         elsif combined_options.include?(:order)
 
@@ -193,9 +197,10 @@ module AridCache
         cached.nil? || opts[:force]
       end
 
-      def get_records
+      # Return the result of calling the proc on this instance
+      def get_result_from_block
         block = self.block || (blueprint && blueprint.proc)
-        self.records = block.nil? ? object.instance_eval(key) : object.instance_eval(&block)
+        block.nil? ? object.instance_eval(key) : object.instance_eval(&block)
       end
 
       # Seed the cache by executing the stored block (or by calling a method on the object).
@@ -203,75 +208,83 @@ module AridCache
       # is either some base type, or usually, a list of active records.
       #
       # Options:
-      #   raw  - if true, return the CacheProxy::Result after seeding the cache, ignoring
+      #   raw  - if true, return the CacheProxy::CachedActiveRecordResult after seeding the cache, ignoring
       #          other options. Default is false.
-      def execute_find(raw = false)
-        get_records
-        cached = AridCache::CacheProxy::Result.new
+      def execute_find(raw_result = false)
+        @records = get_result_from_block
+        @cached =  new_cache_proxy_result : records
+        write_cache
+      end
 
-        if !records.is_a?(Enumerable) || (!records.empty? && !records.first.is_a?(::ActiveRecord::Base))
-          cached = records # some base type, cache it as itself
+      def process_result(result)
+        if raw_result || !result_is_enumerable? || result_is_empty?
+           @cached                   # raw, a base type, or empty; return it
+        if result_is_activerecord? && opts.include?(:order) && !opts[:order].is_a?(Proc)
+          self.klass = @cached.klass # TODO refactor
+          ids = process_enumerable(@cached.ids)  # limit and paginate the ids array
+          fetch_activerecords(ids)               # select only the records we need
         else
-          cached.ids = records.collect(&:id)
-          cached.count = records.size
-          if records.respond_to?(:proxy_reflection) # association proxy
-            cached.klass = records.proxy_reflection.klass
-          elsif !records.empty?
-            cached.klass = records.first.class
-          else
-            cached.klass = object_base_class
-          end
-        end
-        Rails.cache.write(cache_key, cached, opts_for_cache)
-        self.cached = cached
-
-        # Return the raw result?
-        return self.cached if raw
-
-        # An order has been specified.  We have to go to the database
-        # to order because we can't be sure that the current order is the same as the cache.
-        if cached.is_a?(AridCache::CacheProxy::Result) && combined_options.include?(:order)
-          self.klass = self.cached.klass # TODO used by fetch_from_cache needs refactor
-          fetch_from_cache
-        else
-          process_result_in_memory(records)
+          process_enumerable(records)            # do it all in memory
         end
       end
 
-      # Convert records to an array before calling paginate.  If we don't do this
-      # and the result is a named scope, paginate will trigger an additional query
-      # to load the page rather than just using the records we have already fetched.
-      #
-      # If we are not paginating and the options include :limit (and optionally :offset)
-      # apply the limit and offset to the records before returning them.
-      #
-      # Otherwise we have an issue where all the records are returned the first time
-      # the collection is loaded, but on subsequent calls the options_for_find are
-      # included and you get different results.  Note that with options like :order
-      # this cannot be helped.  We don't want to modify the query that generates the
-      # collection because the idea is to allow getting different perspectives of the
-      # cached collection without relying on modifying the collection as a whole.
-      #
-      # If you do want a specialized, modified, or subset of the collection it's best
-      # to define it in a block and have a new cache for it:
-      #
-      # model.my_special_collection { the_collection(:order => 'new order', :limit => 10) }
-      def process_result_in_memory(records)
-        if opts.include?(:page)
-          records = records.respond_to?(:to_a) ? records.to_a : records
-          records.respond_to?(:paginate) ? records.paginate(opts_for_paginate) : records
-        elsif opts.include?(:limit)
-          records = records.respond_to?(:to_a) ? records.to_a : records
-          offset = opts[:offset] || 0
-          records[offset, opts[:limit]]
+      # Return a new CacheProxy CachedActiveRecordResult with information gleaned from +records+,
+      # which should be a list of ActiveRecords.
+      def new_cache_proxy_result(records)
+        if result_is_activerecord? || result_is_empty?
+        result = AridCache::CacheProxy::CachedActiveRecordResult.new
+        result.ids = records.each { |r| r[:id] }
+        result.count = records.size
+        if records.respond_to?(:proxy_reflection) # association proxy
+          result.klass = records.proxy_reflection.klass
+        elsif !records.empty?
+          result.klass = records.first.class
         else
-          records
+          result.klass = object_base_class
         end
+        result
+      end
+
+      # Return a result after processing it to apply limits or pagination.
+      # Only Enumerables
+      # Options are only applied if the object responds to the appropriate method.
+      # So for example pagination will not happen unless the object responds to :paginate.
+      #
+      # Options:
+      #   :order  - order the results in memory if the value is a Proc.  Ordering is done first, before
+      #             applying limits or paginating. The proc is passed to Array#sort to do the sorting.
+      #   :limit  - limit the array to the specified size
+      #   :offset - ignore the first +offset+ items in the array
+      #   :page / :per_page - paginate the result.  If :limit is specified, the array is
+      #             limited before paginating; similarly if :offset is specified the array is offset
+      #             before paginating.  Pagination only happens if the :page option is passed.
+      def process_enumerable(records)
+        # Convert records to an array before calling paginate.  If we don't do this
+        # and the result is a named scope, paginate will trigger an additional query
+        # to load the page rather than just using the records we have already fetched.
+        records = records.respond_to?(:to_a) ? records.to_a : records
+
+        # Order
+        if opts[:order].is_a?(Proc) && records.respond_to?(:sort)
+          records = records.sort(&opts[:order])
+        end
+
+        # Limit / Offset
+        if (opts.include?(:offset) || opts.include?(:limit)) && records.respond_to?(:[])
+          records = records[opts[:offset] || 0, opts[:limit] || records.size]
+        end
+
+        # Paginate
+        if paginate? && records.respond_to?(:paginate)
+          records = records.paginate(opts_for_paginate)
+        end
+
+        records
       end
 
       def execute_count
-        get_records
-        cached = AridCache::CacheProxy::Result.new
+        @result = get_result_from_block
+        @cached = AridCache::CacheProxy::CachedActiveRecordResult.new
 
         # Just get the count if we can.
         #
@@ -283,90 +296,27 @@ module AridCache
         # on an association proxy will hower trigger a select because it loads up the target
         # and passes the respond_to? on to it.
         if records.respond_to?(:proxy_reflection) || records.respond_to?(:proxy_options)
-          cached.count = records.count # just get the count
-          cached.klass = object_base_class
-        elsif records.is_a?(Enumerable) && (records.empty? || records.first.is_a?(::ActiveRecord::Base))
-          cached.ids = records.collect(&:id) # get everything now that we have it
-          cached.count = records.size
-          cached.klass = records.empty? ? object_base_class : records.first.class
+          @cached.count = records.count # just get the count
+          @cached.klass = object_base_class
+        elsif records.is_a?(Enumerable) && (records.empty? || result_is_activerecord?)
+          @cached.ids = records.collect(&:id) # get everything now that we have it
+          @cached.count = records.size
+          @cached.klass = records.empty? ? object_base_class : records.first.class
         else
-          cached = records # some base type, cache it as itself
+          @cached = records # some base type, cache it as itself
         end
 
-        Rails.cache.write(cache_key, cached, opts_for_cache)
+        write_cache
         self.cached = cached
         cached.respond_to?(:count) ? cached.count : cached
       end
 
-      OPTIONS_FOR_PAGINATE = [:page, :per_page, :total_entries, :finder]
-
-      # Filter options for paginate, if *klass* is set, we get the :per_page value from it.
-      def opts_for_paginate
-        paginate_opts = combined_options.reject { |k,v| !OPTIONS_FOR_PAGINATE.include?(k) }
-        paginate_opts[:finder] = :find_all_by_id unless paginate_opts.include?(:finder)
-        paginate_opts[:per_page] = klass.per_page if klass && !paginate_opts.include?(:per_page)
-        paginate_opts
-      end
-
-      OPTIONS_FOR_FIND = [ :conditions, :include, :joins, :limit, :offset, :order, :select, :readonly, :group, :having, :from, :lock ]
-
-      # Preserve the original order of the results if no :order option is specified.
-      #
-      # @arg ids array of ids to order by unless an :order option is specified.  If not
-      #      specified, cached.ids is used.
-      def opts_for_find(ids=nil)
-        ids ||= cached.ids
-        find_opts = combined_options.reject { |k,v| !OPTIONS_FOR_FIND.include?(k) }
-        find_opts[:order] = preserve_order(ids) unless find_opts.include?(:order)
-        find_opts
-      end
-
-      OPTIONS_FOR_CACHE = [ :expires_in ]
-
-      def opts_for_cache
-        combined_options.reject { |k,v| !OPTIONS_FOR_CACHE.include?(k) }
-      end
-
-      OPTIONS_FOR_CACHE_KEY = [ :auto_expire ]
-
-      def opts_for_cache_key
-        combined_options.reject { |k,v| !OPTIONS_FOR_CACHE_KEY.include?(k) }
-      end
-
-      OPTIONS_FOR_CACHE_PROXY = [:raw, :clear]
-
-      # Returns options that affect the cache proxy result
-      def opts_for_cache_proxy
-        combined_options.reject { |k,v| !OPTIONS_FOR_CACHE_PROXY.include?(k) }
+      def write_cache
+        Rails.cache.write(cache_key, cached, opts_for_cache)
       end
 
       def object_base_class #:nodoc:
         object.is_a?(Class) ? object : object.class
-      end
-
-      # Generate an ORDER BY clause that preserves the ordering of the ids in *ids*.
-      #
-      # The method we use depends on the database adapter because only MySQL
-      # supports the ORDER BY FIELD() function.  For other databases we use
-      # a CASE statement.
-      #
-      # TODO: is it quicker to sort in memory?
-      def preserve_order(ids)
-        column = if self.klass.respond_to?(:table_name)
-          ::ActiveRecord::Base.connection.quote_table_name(self.klass.table_name) + '.id'
-        else
-          "id"
-        end
-
-        if ids.empty?
-          nil
-        elsif ::ActiveRecord::Base.is_mysql_adapter?
-          "FIELD(#{column},#{ids.join(',')})"
-        else
-          order = ''
-          ids.each_index { |i| order << "WHEN #{column}=#{ids[i]} THEN #{i+1} " }
-          "CASE " + order + " END"
-        end
       end
   end
 end
