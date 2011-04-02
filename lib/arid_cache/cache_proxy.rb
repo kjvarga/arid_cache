@@ -1,5 +1,8 @@
+require 'artd_cache/cache_proxy/options_helpers'
+
 module AridCache
   class CacheProxy
+
     attr_accessor :object, :key, :opts, :blueprint, :cached, :cache_key, :block, :records, :combined_options, :klass
 
     # AridCache::CacheProxy::Result
@@ -121,8 +124,9 @@ module AridCache
       end
     end
 
-
     private
+
+      include AridCache::CacheProxy::OptionsHelpers
 
       # Return a list of records from the database using the ids from
       # the cached Result.
