@@ -51,6 +51,10 @@ module AridCache
       def raw?
         !!self[:raw]
       end
+      
+      def count_only?
+        !!self[:count_only]
+      end
     end
   end
 end

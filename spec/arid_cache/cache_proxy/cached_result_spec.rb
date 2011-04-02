@@ -1,9 +1,9 @@
 require 'spec_helper'
 
-describe AridCache::CacheProxy::Result do
+describe AridCache::CacheProxy::CachedResult do
   before :each do
     class X; end
-    @result = AridCache::CacheProxy::Result.new
+    @result = AridCache::CacheProxy::CachedResult.new
   end
 
   it "should set the klass from a class" do
