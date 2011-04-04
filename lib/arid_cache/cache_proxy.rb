@@ -97,7 +97,7 @@ module AridCache
     private
 
       # Return a ResultProcessor instance.  Seed the cache if we need to, otherwise
-      # use what's in the cache.
+      # use what is in the cache.
       def result_processor
         seed_cache? ? seed_cache : ResultProcessor.new(@cached, @options)
       end

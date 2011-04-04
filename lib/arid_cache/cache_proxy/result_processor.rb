@@ -8,9 +8,9 @@ module AridCache
     # and especially those containing active records.
     class ResultProcessor
 
-      def initialize(result, options=nil)
+      def initialize(result, opts={})
         @result = result
-        @options = options
+        @options = opts.is_a?(AridCache::CacheProxy::Options) ? opts : AridCache::CacheProxy::Options.new(opts)
 
         @result_klass = @options[:result_klass] = is_cached_result? ? @result.klass : Utilities.object_class(@options[:receiver])
       end
@@ -30,8 +30,10 @@ module AridCache
         is_enumerable? && @result.first.is_a?(Hash)
       end
 
+      # Order in the database if an order clause has been specified and we
+      # have a list of ActiveRecords or a CachedResult.
       def order_in_database?
-        is_activerecord? && !@options[:order].is_a?(Proc)
+        @options.order_by_key? && (is_activerecord? || is_cached_result?)
       end
 
       # Return true if the result is an enumerable and the first item is
@@ -50,42 +52,24 @@ module AridCache
 
       # Return the result to cache.  For base types the original result is
       # returned.  ActiveRecords return a CachedResult.
-      def to_cache(opts={})
-        opts.reverse_merge!(:count_only => false)
-        if opts[:count_only]
-          # Just get the count if we can.
-          #
-          # Because of how AssociationProxy works, if we even look at it, it'll
-          # trigger the query.  So don't look.
-          #
-          # Association proxy or named scope.  Check for an association first, because
-          # it doesn't trigger the select if it's actually named scope.  Calling respond_to?
-          # on an association proxy will hower trigger a select because it loads up the target
-          # and passes the respond_to? on to it.
-          if is_proxy_reflection?
-            lazy_cache.count = @result.count # just get the count
-            lazy_cache
-          elsif is_activerecord? || is_empty?
-            lazy_cache.ids = @result.each { |r| r[:id] }
-            lazy_cache.count = @result.size
-            lazy_cache.klass = @result.first.class unless is_empty?
-            lazy_cache
-          else
-            @result
+      def to_cache
+        # Ceck if it's an association first, because it doesn't trigger the select if it's
+        # a named scope.  Calling respond_to? on an association proxy will trigger a select
+        # because it loads up the target and passes the respond_to? on to it.
+        if is_proxy_reflection?
+          lazy_cache.klass = @result.proxy_reflection.klass
+          unless @options.count_only?
+            lazy_cache.ids = @result.collect { |r| r[:id] }
           end
+          lazy_cache.count = @result.count
+          lazy_cache
+        elsif is_activerecord? || is_empty?
+          lazy_cache.ids = @result.collect { |r| r[:id] }
+          lazy_cache.count = @result.size
+          lazy_cache.klass = @result.first.class
+          lazy_cache
         else
-          if is_activerecord? || is_empty?
-            lazy_cache.ids = @result.each { |r| r[:id] }
-            lazy_cache.count = @result.size
-            if is_proxy_reflection?
-              lazy_cache.klass = @result.proxy_reflection.klass
-            elsif !is_empty?
-              lazy_cache.klass = @result.first.class
-            end
-            lazy_cache
-          else
-            @result
-          end
+          @result
         end
       end
 
@@ -97,12 +81,12 @@ module AridCache
         elsif @options.raw? || !is_enumerable?
           @result
         else
-          operand = is_cached_result? ? @result.ids : @result
-          filtered_result = order_in_database? ? operand : filter_results(operand)
-          if is_activerecord?
-            fetch_activerecords(filtered_result)
+          if is_cached_result?
+            fetch_activerecords(filter_results(@result.ids))
+          elsif order_in_database?
+            fetch_activerecords(filter_results(@result))
           else
-            filtered_result
+            filter_results(@result)
           end
         end
       end
@@ -139,6 +123,7 @@ module AridCache
       #             limited before paginating; similarly if :offset is specified the array is offset
       #             before paginating.  Pagination only happens if the :page option is passed.
       def filter_results(records)
+        return records if order_in_database?
 
         # Order in memory
         if records.respond_to?(:sort)
@@ -167,13 +152,14 @@ module AridCache
         records
       end
 
-      # Return a list of records from the database by ids.  +ids+ must
-      # be a non-empty list.
+      # Return a list of records from the database.  +records+ is a list of
+      # ActiveRecords or a list of ActiveRecord ids.
       #
-      # If no :order is specified, the current ordering of the ids is
-      # preserved with some fancy SQL.  If an arder is specified then
+      # If no :order is specified, the current order is preserved with some fancy SQL.
+      # If an arder is specified then
       # order, limit and paginate in the database.
-      def fetch_activerecords(ids)
+      def fetch_activerecords(records)
+        ids = records.first.is_a?(ActiveRecord) ? records.collect { |record| record[:id] } : records
         find_opts = @options.opts_for_find(ids)
         if order_in_database?
           if @options.paginate?
@@ -183,10 +169,10 @@ module AridCache
             @result_klass.find_all_by_id(ids, find_opts)
           end
         else
-          # Limits have already been applied, so remove them from the options to find.
+          # Limits will have already been applied, remove them from the options for find.
           [:offset, :limit].each { |key| find_opts.delete(key) }
-          records = @result_klass.find_all_by_id(ids, find_opts)
-          ids.is_a?(WIllPaginate::Collection) ? ids.replace(records) : records
+          result = @result_klass.find_all_by_id(ids, find_opts)
+          records.is_a?(WIllPaginate::Collection) ? records.replace(result) : result
         end
       end
     end
