@@ -172,7 +172,7 @@ module AridCache
           # Limits will have already been applied, remove them from the options for find.
           [:offset, :limit].each { |key| find_opts.delete(key) }
           result = @result_klass.find_all_by_id(ids, find_opts)
-          records.is_a?(WIllPaginate::Collection) ? records.replace(result) : result
+          records.is_a?(::WillPaginate::Collection) ? records.replace(result) : result
         end
       end
     end
