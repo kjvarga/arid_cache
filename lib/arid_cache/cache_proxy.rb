@@ -1,5 +1,6 @@
-require 'artd_cache/cache_proxy/options'
-require 'artd_cache/cache_proxy/result'
+require 'arid_cache/cache_proxy/utilities'
+require 'arid_cache/cache_proxy/options'
+require 'arid_cache/cache_proxy/result_processor'
 
 module AridCache
   class CacheProxy
@@ -50,6 +51,11 @@ module AridCache
       Rails.cache.delete_matched(%r[arid-cache-#{key}.*])
     end
 
+    # Clear the cached result for this cache only
+    def clear_cached
+      Rails.cache.delete(@cache_key, @options.opts_for_cache)
+    end
+
     #
     # Initialize
     #
@@ -76,9 +82,7 @@ module AridCache
     # not a CacheProxy::CachedResult
     def fetch_count
       @options[:count_only] = true
-      new_result.process
-      
-
+      result_processor.to_result
     end
 
     # Return a list of records using the options provided.  If the item in the cache
@@ -87,53 +91,21 @@ module AridCache
     # CacheProxy::CachedResult unmodified, ignoring other options, except where those options
     # are needed to initialize the cache.
     def fetch
-      new_result.process
-      
-      # TODO verify
-      elsif @cached.is_a?(CachedResult)
-        if @cached.has_ids? && @options.raw?
-          @cached                               # return it unmodified
-        elsif @cached.has_ids?
-          ids = .process(opts)
-          fetch_activerecords(ids)              # select only the records we need
-        else                                    # true when we have only calculated the count
-          seed_cache
-        end
-      elsif @cached.is_a?(Enumerable)
-        ResultProcessor.new(@cached).process(opts)    # process enumerable in memory
-      else
-        @cached                                  # base type, return as is
-      end
-    end
-
-    # Clear the cached result for this cache only
-    def clear_cached
-      Rails.cache.delete(@cache_key, @options.opts_for_cache)
+      result_processor.to_result
     end
 
     private
 
       # Return a ResultProcessor instance.  Seed the cache if we need to, otherwise
       # use what's in the cache.
-      def new_result
+      def result_processor
         seed_cache? ? seed_cache : ResultProcessor.new(@cached, @options)
       end
 
-      # Return a boolean indicating whether we need to seed the cache
+      # Return a boolean indicating whether we need to seed the cache.  Seed the cache
+      # if :force => true, the cache is empty or we need to calculate a count and we haven't yet.
       def seed_cache?
         @cached.nil? || @options.force? || (@cached.is_a?(CachedResult) && @options.count_only? && !@cached.has_count?)
-      end
-      
-      # Return the class of the cached results i.e. if the cached result is a
-      # list of Album records, then klass returns Album.  If there is nothing
-      # in the cache, then the class is inferred to be the class of the object
-      # that the cached method is being called on.
-      def result_klass
-        @result_klass ||= if @cached && @cached.is_a?(CachedResult)
-          @cached.klass
-        else
-          Utilities.object_class(@receiver)
-        end
       end
 
       # Seed the cache by executing the stored block (or by calling a method on the object)

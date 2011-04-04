@@ -1,7 +1,5 @@
-require 'arid_cache/cache_proxy/utilities'
-
 module AridCache
-  module CacheProxy
+  class CacheProxy
     # A class representing a hash of options with methods to return subsets of
     # those options.
     class Options < Hash
@@ -9,11 +7,11 @@ module AridCache
         self.merge!(opts)
       end
       
-      # Filter options for paginate, if *klass* is set, we get the :per_page value from it.
-      def opts_for_paginate(klass=nil)
+      # Filter options for paginate.  Get the :per_page value from the receiver if it's not set.
+      def opts_for_paginate
         paginate_opts = reject { |k,v| !OPTIONS_FOR_PAGINATE.include?(k) }
         paginate_opts[:finder] = :find_all_by_id unless paginate_opts.include?(:finder)
-        paginate_opts[:per_page] = klass.per_page if klass && !paginate_opts.include?(:per_page)
+        paginate_opts[:per_page] = self[:result_klass].per_page if self[:result_klass] && !paginate_opts.include?(:per_page) && self[:result_klass].respond_to?(:per_page)
         paginate_opts
       end
 
@@ -23,7 +21,7 @@ module AridCache
       # @arg ids array of ids to order by unless an :order option is specified.
       def opts_for_find(ids)
         find_opts = reject { |k,v| !OPTIONS_FOR_FIND.include?(k) }
-        find_opts[:order] = AridCache::CacheProxy::Utilities.preserve_order(ids) unless find_opts.include?(:order)
+        find_opts[:order] = AridCache::CacheProxy::Utilities.order_by(ids, self[:result_klass]) unless find_opts.include?(:order)
         find_opts
       end
 
@@ -54,6 +52,14 @@ module AridCache
       
       def count_only?
         !!self[:count_only]
+      end
+    
+      def order_by_proc?
+        include?(:order) && self[:order].is_a?(Proc)
+      end
+      
+      def order_by_key?
+        include?(:order) && (self[:order].is_a?(Symbol) || self[:order].is_a?(String))
       end
     end
   end

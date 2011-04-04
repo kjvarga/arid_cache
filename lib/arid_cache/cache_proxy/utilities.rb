@@ -1,18 +1,16 @@
 module AridCache
-  module CacheProxy
+  class CacheProxy
     module Utilities
       extend self
-      
+
       # Generate an ORDER BY clause that preserves the ordering of the ids in *ids*.
       #
       # The method we use depends on the database adapter because only MySQL
       # supports the ORDER BY FIELD() function.  For other databases we use
       # a CASE statement.
-      #
-      # TODO: is it quicker to sort in memory?
-      def preserve_order(ids)
-        column = if self.klass.respond_to?(:table_name)
-          ::ActiveRecord::Base.connection.quote_table_name(self.klass.table_name) + '.id'
+      def order_by(ids, klass=nil)
+        column = if klass.respond_to?(:table_name)
+          ::ActiveRecord::Base.connection.quote_table_name(klass.table_name) + '.id'
         else
           "id"
         end
@@ -27,7 +25,7 @@ module AridCache
           "CASE " + order + " END"
         end
       end
-      
+
       # Return the object's class or the object if it is a class.
       def object_class(object)
         object.is_a?(Class) ? object : object.class
