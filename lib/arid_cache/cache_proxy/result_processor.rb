@@ -83,7 +83,7 @@ module AridCache
         else
           if is_cached_result?
             fetch_activerecords(filter_results(@result.ids))
-          elsif order_in_database?
+          elsif order_in_database? 
             fetch_activerecords(filter_results(@result))
           else
             filter_results(@result)
@@ -185,7 +185,7 @@ module AridCache
 
       # Return the klass to use for building results (only applies to ActiveRecord results)
       def result_klass
-        @options[:result_klass] = is_cached_result? ? @result.klass : Utilities.object_class(@options[:receiver])
+        @options[:result_klass] = is_cached_result? ? @result.klass : (@cached.is_a?(AridCache::CacheProxy::CachedResult) ? @cached.klass : Utilities.object_class(@options[:receiver]))
       end
     end
   end
