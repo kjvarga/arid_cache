@@ -166,7 +166,7 @@ module AridCache
       # order, limit and paginate in the database.
       def fetch_activerecords(records)
         if records.empty?
-          if @options.paginate?  
+          if @options.paginate?
             return records.paginate(@options.opts_for_paginate(records))
           else
             return records

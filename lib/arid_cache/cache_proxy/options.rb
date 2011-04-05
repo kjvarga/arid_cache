@@ -21,11 +21,14 @@ module AridCache
 
       # Return options suitable to pass to ActiveRecord::Base#find.
       # Preserve the original order of the results if no :order option is specified.
+      # If an offset is specified but no limit, ActiveRecord will not apply the offset,
+      # so pass in a limit that is as big as +ids.size+
       #
       # @arg ids array of ids to order by unless an :order option is specified.
       def opts_for_find(ids)
         find_opts = reject { |k,v| !OPTIONS_FOR_FIND.include?(k) }
         find_opts[:order] = AridCache::CacheProxy::Utilities.order_by(ids, self[:result_klass]) unless find_opts.include?(:order)
+        find_opts[:limit] = ids.size unless find_opts.include?(:limit)
         find_opts
       end
 
