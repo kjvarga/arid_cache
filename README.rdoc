@@ -1,13 +1,14 @@
 = AridCache
 
-AridCache makes caching easy and effective.  AridCache supports caching on all of your ActiveRecord model named scopes, class and instance methods right out of the box.  AridCache keeps caching logic out of your model methods and clarifies your view code by making calls to cached result sets explicit.
+AridCache makes caching easy and effective.  AridCache supports caching on all ActiveRecord class and instance methods right out of the box.  AridCache keeps caching logic out of your model methods and clarifies your code by making calls to cached result sets explicit.
 
-AridCache supports caching large, expensive ActiveRecord collections by caching only the model IDs, provides efficient in-memory pagination of your cached collections, and gives you collection counts for free.  Non-ActiveRecord collection data is cached unchanged allowing you to cache the results of any expensive operation simply by prepending your method call with <tt>cached_</tt>.
+AridCache supports caching large, expensive ActiveRecord collections by caching only the model IDs, provides efficient in-memory pagination of your cached collections, and gives you collection counts for free.  Non-ActiveRecord collection data is cached unchanged allowing you to cache the results of anything simply by prepending your method call with <tt>cached_</tt>.
 
-AridCache simplifies caching by supporting auto-expiring cache keys - as well as common options like <tt>:expires_in</tt> - and provides methods to help you manage your caches at the global, model class, model instance and per-cache level.
+AridCache simplifies caching by supporting auto-expiring cache keys - as well as common options like <tt>:expires_in</tt> - and provides methods to help you manage your caches.
 
 == Changes
 
+v1.3.0: Support limits, ordering and pagination on cached Enumerables
 v1.2.0: Fix Rails 3 ActiveRecord hooks & remove some Rails dependencies
 v1.0.5: Support <tt>:raw</tt> and <tt>:clear</tt> options.
 
@@ -33,11 +34,27 @@ Then
 
   rake gems:install
 
+== Features
+
+* Include the AridCache module in any Class
+* Rails 2 & 3 compatible with automatic ActiveRecord::Base integration
+* Supports auto-expiring cache keys
+* Supports limits, ordering & pagination of cached Enumerables and ActiveRecord collections
+* Define caches and their options on your class using +instance_caches+ and +class_caches+
+* Counts for free - if you have already cached the result, you get the count for free
+* Supports eager-loading and other options to <tt>ActiveRecord::Base#find</tt> like
+:conditions, :include, :joins, :select, :readonly, :group, :having, :from
+* Provides methods to clear caches individually, at the instance-level, class-level and globally
+* Preserves the order of your cached ActiveRecord collections
+* Optimized to make as few cache and database accesses as absolutely neccessary
+
 == Introduction
 
 The name AridCache comes from <b>A</b>ctive<b>R</b>ecord *ID* Cache.  It's also very DRY...get it? :)
 
-Out of the box AridCache supports caching on all your ActiveRecord class and instance methods and named scopes...basically if a class or class instance <tt>respond_to?</tt> something, you can cache it.
+Out of the box AridCache supports caching on all your ActiveRecord class and instance methods and named scopes.  If a class or class instance <tt>respond_to?</tt> something, you can cache it.
+
+AridCache supports limits, pagination and ordering options on cached ActiveRecord collections and any other Enumerable.  Options to apply limits are <tt>:limit</tt> and <tt>:offset</tt>.  Options for pagination are <tt>:page</tt> and <tt>:per_page</tt> and the <tt>:order</tt> option accepts the same values as ActiveRecord::Base#find.  If the cached value is an ActiveRecord collection most other options to ActiveRecord::Base#find are supported too.  If the cached value is an Enumerable (e.g. an Array) the value for :order must be a <tt>Proc</tt>.  The Proc is passed to Enumerable#sort to do the sorting.  Unless the Enumerable is a list of Hashes in which case it can be a String or Symbol giving the hash key to sort by.
 
 The way you interact with the cache via your model methods is to prepend the method call with <tt>cached_</tt>.  The part of the method call after <tt>cached_</tt> serves as the basis for the cache key.  For example,
 
@@ -46,7 +63,6 @@ The way you interact with the cache via your model methods is to prepend the met
 
 You can also define caches that use compositions of methods or named scopes, or other complex queries, without having to add a new method to your class.  This way you can also create different caches that all use the same method.  For example,
 
-  # cache key is arid-cache-user-most_active_users
   User.cached_most_active_users do
     active.find(:order => 'activity DESC', :limit => 5)
   end
@@ -55,17 +71,19 @@ You can also define caches that use compositions of methods or named scopes, or 
 
 If the result of your <tt>cached_</tt> call is an array of ActiveRecords, AridCache only stores the IDs in the cache (because it's a bad idea to store records in the cache).
 
-On subsequent calls we call <tt>find_all_by_id</tt> on the target class passing in the ActiveRecord IDs that were stored in the cache.  AridCache will preserve the original ordering of your collection (you can change this using the <tt>:order</tt>).
+On subsequent calls we call <tt>find_all_by_id</tt> on the target class passing in the ActiveRecord IDs that were stored in the cache.  AridCache will preserve the original ordering of your collection (you can change this using the <tt>:order</tt> option).
 
 The idea here is to cache collections that are expensive to query.  Once the cache is loaded, retrieving the cached records from the database simply involves a <tt>SELECT * FROM table WHERE id IN (ids, ...)</tt>.
 
 Consider how long it would take to get the top 10 favorited tracks of all time from a database with a million tracks and 100,000 users.  Now compare that to selecting 10 tracks by ID from the track table.  The performance gain is huge.
 
+=== Enumerables
+
+Cached enumerables support find-like options such as <tt>:limit</tt>, <tt>:offset</tt> and <tt>order</tt> as well as pagination options <tt>:page</tt> and <tt>:per_page</tt>.  <tt>:order</tt> must be a <tt>Proc</tt>.  It is passed to Enumerable#sort to do the sorting.  Unless the enumerable contains hashes in which case <tt>:order</tt> can be a string or symbol hash key to order by.
+
 === Base Types and Other Collections
 
-Arrays of non-ActiveRecords are stored as-is so you can cache arrays of strings and other types without problems.
-
-Any other objects (including single ActiveRecord objects) are cached and returned as-is.
+Anything that is not an array of ActiveRecords is cached as-is.  Numbers, arrays, hashes, nils, whatever.
 
 === Example
 

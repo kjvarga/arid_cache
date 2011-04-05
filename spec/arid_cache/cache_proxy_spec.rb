@@ -25,8 +25,8 @@ describe AridCache::CacheProxy do
   #     @user.clear_instance_caches
   #   end
   # 
-  #   it "should return a CacheProxy::CachedActiveRecordResult" do
-  #     @user.cached_companies(:raw => true).should be_a(AridCache::CacheProxy::CachedActiveRecordResult)
+  #   it "should return a CacheProxy::CachedResult" do
+  #     @user.cached_companies(:raw => true).should be_a(AridCache::CacheProxy::CachedResult)
   #   end
   # 
   #   it "result should have the same ids as the normal result" do
