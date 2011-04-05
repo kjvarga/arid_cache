@@ -165,7 +165,14 @@ module AridCache
       # If an arder is specified then
       # order, limit and paginate in the database.
       def fetch_activerecords(records)
-        return records if records.empty?
+        if records.empty?
+          if @options.paginate?  
+            return records.paginate(@options.opts_for_paginate(records))
+          else
+            return records
+          end
+        end
+
         ids = records.first.is_a?(ActiveRecord) ? records.collect { |record| record[:id] } : records
         find_opts = @options.opts_for_find(ids)
         if order_in_database?
