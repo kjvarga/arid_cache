@@ -42,7 +42,7 @@ module AridCache
         is_enumerable? && @result.first.is_a?(::ActiveRecord::Base)
       end
 
-      def is_proxy_reflection?
+      def is_activerecord_reflection?
         @result.respond_to?(:proxy_reflection) || @result.respond_to?(:proxy_options)
       end
 
@@ -56,9 +56,9 @@ module AridCache
         # Ceck if it's an association first, because it doesn't trigger the select if it's
         # a named scope.  Calling respond_to? on an association proxy will trigger a select
         # because it loads up the target and passes the respond_to? on to it.
-        if is_proxy_reflection?
-          lazy_cache.klass = @result.proxy_reflection.klass
-          unless @options.count_only?
+        if is_activerecord_reflection?
+          lazy_cache.klass = @result.proxy_reflection.klass if @result.respond_to?(:proxy_reflection)
+          if !@options.count_only?
             lazy_cache.ids = @result.collect { |r| r[:id] }
           end
           lazy_cache.count = @result.count
@@ -78,7 +78,7 @@ module AridCache
       def to_result
         if @options.count_only?
           get_count
-        elsif @options.raw? || !is_enumerable?
+        elsif @options.raw? || !is_enumerable? || is_empty?
           @result
         else
           if is_cached_result?
@@ -147,7 +147,7 @@ module AridCache
           # and the result is a named scope, paginate will trigger an additional query
           # to load the page rather than just using the records we have already fetched.
           records = records.respond_to?(:to_a) ? records.to_a : records
-          records = records.paginate(@options.opts_for_paginate, { :total_entries => ids.size })
+          records = records.paginate(@options.opts_for_paginate(records))
         end
         records
       end
@@ -163,8 +163,8 @@ module AridCache
         find_opts = @options.opts_for_find(ids)
         if order_in_database?
           if @options.paginate?
-            find_opts.merge!(@options.opts_for_paginate)
-            @result_klass.paginate(ids, { :total_entries => ids.size }.merge(find_opts))
+            find_opts.merge!(@options.opts_for_paginate(ids))
+            @result_klass.paginate(ids, find_opts)
           else
             @result_klass.find_all_by_id(ids, find_opts)
           end

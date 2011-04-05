@@ -8,10 +8,12 @@ module AridCache
       end
       
       # Filter options for paginate.  Get the :per_page value from the receiver if it's not set.
-      def opts_for_paginate
+      # Set total_entries to +records.size+ if +records+ is supplied
+      def opts_for_paginate(records=nil)
         paginate_opts = reject { |k,v| !OPTIONS_FOR_PAGINATE.include?(k) }
         paginate_opts[:finder] = :find_all_by_id unless paginate_opts.include?(:finder)
         paginate_opts[:per_page] = self[:result_klass].per_page if self[:result_klass] && !paginate_opts.include?(:per_page) && self[:result_klass].respond_to?(:per_page)
+        paginate_opts[:total_entries] = records.size unless records.nil?
         paginate_opts
       end
 
