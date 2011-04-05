@@ -103,9 +103,10 @@ module AridCache
       end
 
       # Return a boolean indicating whether we need to seed the cache.  Seed the cache
-      # if :force => true, the cache is empty or we need to calculate a count and we haven't yet.
+      # if :force => true, the cache is empty or records have been requested and there
+      # are none in the cache yet.
       def seed_cache?
-        @cached.nil? || @options.force? || (@cached.is_a?(CachedResult) && @options.count_only? && !@cached.has_count?)
+        @cached.nil? || @options.force? || (@cached.is_a?(CachedResult) && !@options.count_only? && !@cached.has_ids?)
       end
 
       # Seed the cache by executing the stored block (or by calling a method on the object)

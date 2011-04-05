@@ -11,8 +11,6 @@ module AridCache
       def initialize(result, opts={})
         @result = result
         @options = opts.is_a?(AridCache::CacheProxy::Options) ? opts : AridCache::CacheProxy::Options.new(opts)
-
-        @result_klass = @options[:result_klass] = is_cached_result? ? @result.klass : Utilities.object_class(@options[:receiver])
       end
 
       # Return true if the result is an enumerable and it is empty.
@@ -53,15 +51,17 @@ module AridCache
       # Return the result to cache.  For base types the original result is
       # returned.  ActiveRecords return a CachedResult.
       def to_cache
-        # Ceck if it's an association first, because it doesn't trigger the select if it's
+        # Check if it's an association first, because it doesn't trigger the select if it's
         # a named scope.  Calling respond_to? on an association proxy will trigger a select
         # because it loads up the target and passes the respond_to? on to it.
-        if is_activerecord_reflection?
+        @cached = if is_activerecord_reflection?
           lazy_cache.klass = @result.proxy_reflection.klass if @result.respond_to?(:proxy_reflection)
-          if !@options.count_only?
+          if @options.count_only?
+            lazy_cache.count = @result.count
+          else
             lazy_cache.ids = @result.collect { |r| r[:id] }
+            lazy_cache.count = @result.size
           end
-          lazy_cache.count = @result.count
           lazy_cache
         elsif is_activerecord? || is_empty?
           lazy_cache.ids = @result.collect { |r| r[:id] }
@@ -94,7 +94,13 @@ module AridCache
       private
 
       def get_count
-        @result.respond_to?(:count) ? @result.count : @result
+        if @cached.is_a?(AridCache::CacheProxy::CachedResult) # use what we put in the cache
+          @cached.count
+        elsif @result.respond_to?(:count)
+          @result.count
+        else
+          @result
+        end
       end
 
       # Lazy-initialize a new cached result.  Default the klass of the result to
@@ -165,16 +171,21 @@ module AridCache
         if order_in_database?
           if @options.paginate?
             find_opts.merge!(@options.opts_for_paginate(ids))
-            @result_klass.paginate(ids, find_opts)
+            result_klass.paginate(ids, find_opts)
           else
-            @result_klass.find_all_by_id(ids, find_opts)
+            result_klass.find_all_by_id(ids, find_opts)
           end
         else
           # Limits will have already been applied, remove them from the options for find.
           [:offset, :limit].each { |key| find_opts.delete(key) }
-          result = @result_klass.find_all_by_id(ids, find_opts)
+          result = result_klass.find_all_by_id(ids, find_opts)
           records.is_a?(::WillPaginate::Collection) ? records.replace(result) : result
         end
+      end
+
+      # Return the klass to use for building results (only applies to ActiveRecord results)
+      def result_klass
+        @options[:result_klass] = is_cached_result? ? @result.klass : Utilities.object_class(@options[:receiver])
       end
     end
   end
