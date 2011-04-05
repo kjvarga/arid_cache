@@ -78,7 +78,7 @@ module AridCache
       def to_result
         if @options.count_only?
           get_count
-        elsif @options.raw? || !is_enumerable? || is_empty?
+        elsif @options.raw? || (!is_cached_result? && !is_enumerable?)
           @result
         else
           if is_cached_result?
@@ -159,6 +159,7 @@ module AridCache
       # If an arder is specified then
       # order, limit and paginate in the database.
       def fetch_activerecords(records)
+        return records if records.empty?
         ids = records.first.is_a?(ActiveRecord) ? records.collect { |record| record[:id] } : records
         find_opts = @options.opts_for_find(ids)
         if order_in_database?
