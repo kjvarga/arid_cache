@@ -31,7 +31,7 @@ module AridCache
       # Order in the database if an order clause has been specified and we
       # have a list of ActiveRecords or a CachedResult.
       def order_in_database?
-        @options.order_by_key? && (is_activerecord? || is_cached_result?)
+        is_cached_result? || (@options.order_by_key? && is_activerecord?)
       end
 
       # Return true if the result is an enumerable and the first item is
@@ -83,7 +83,7 @@ module AridCache
         else
           if is_cached_result?
             fetch_activerecords(filter_results(@result.ids))
-          elsif order_in_database? 
+          elsif order_in_database?
             fetch_activerecords(filter_results(@result))
           else
             filter_results(@result)
@@ -113,7 +113,7 @@ module AridCache
       end
 
       # Return the result after processing it to apply limits or pagination in memory.
-      # Not to be called when we have to order in the databse.
+      # Doesn't do anything if we have to order in the databse.
       #
       # Options are only applied if the object responds to the appropriate method.
       # So for example pagination will not happen unless the object responds to :paginate.
