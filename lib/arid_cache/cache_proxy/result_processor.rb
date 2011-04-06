@@ -54,23 +54,26 @@ module AridCache
         # Check if it's an association first, because it doesn't trigger the select if it's
         # a named scope.  Calling respond_to? on an association proxy will trigger a select
         # because it loads up the target and passes the respond_to? on to it.
-        @cached = if is_activerecord_reflection?
-          lazy_cache.klass = @result.proxy_reflection.klass if @result.respond_to?(:proxy_reflection)
-          if @options.count_only?
-            lazy_cache.count = @result.count
-          else
+        @cached =
+          if @options.proxy?
+            Utilities.object_class(@options[:receiver]).send(@options[:proxy], @result)
+          elsif is_activerecord_reflection?
+            lazy_cache.klass = @result.proxy_reflection.klass if @result.respond_to?(:proxy_reflection)
+            if @options.count_only?
+              lazy_cache.count = @result.count
+            else
+              lazy_cache.ids = @result.collect { |r| r[:id] }
+              lazy_cache.count = @result.size
+            end
+            lazy_cache
+          elsif is_activerecord? || is_empty?
             lazy_cache.ids = @result.collect { |r| r[:id] }
             lazy_cache.count = @result.size
+            lazy_cache.klass = @result.first.class
+            lazy_cache
+          else
+            @result
           end
-          lazy_cache
-        elsif is_activerecord? || is_empty?
-          lazy_cache.ids = @result.collect { |r| r[:id] }
-          lazy_cache.count = @result.size
-          lazy_cache.klass = @result.first.class
-          lazy_cache
-        else
-          @result
-        end
       end
 
       # Apply any options like pagination or ordering and return the result, which
@@ -78,16 +81,27 @@ module AridCache
       def to_result
         if @options.count_only?
           get_count
-        elsif @options.raw? || (!is_cached_result? && !is_enumerable?)
+        elsif is_cached_result? && @options.raw?
           @result
-        else
-          if is_cached_result?
-            fetch_activerecords(filter_results(@result.ids))
-          elsif order_in_database?
-            fetch_activerecords(filter_results(@result))
+        elsif @options.proxy?
+          results = 
+            if @cached.nil? || !@options.raw?
+              @result
+            else
+              @cached
+            end
+          filtered = filter_results(results)
+          if @cached.nil? && !@options.raw?
+            Utilities.object_class(@options[:receiver]).send(@options[:proxy], filtered)
           else
-            filter_results(@result)
+            filtered
           end
+        elsif is_cached_result?
+          fetch_activerecords(filter_results(@result.ids))
+        elsif order_in_database?
+          fetch_activerecords(filter_results(@result))
+        else
+          filter_results(@result)
         end
       end
 

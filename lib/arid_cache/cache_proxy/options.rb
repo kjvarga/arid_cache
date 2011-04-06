@@ -67,6 +67,10 @@ module AridCache
       
       def order_by_key?
         include?(:order) && (self[:order].is_a?(Symbol) || self[:order].is_a?(String))
+      end  
+      
+      def proxy?
+        include?(:proxy)
       end
     end
   end
