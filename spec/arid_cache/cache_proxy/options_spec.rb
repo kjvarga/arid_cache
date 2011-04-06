@@ -76,5 +76,11 @@ describe AridCache::CacheProxy::Options do
     it "should use find_all_by_id as the finder" do
       new_options.opts_for_paginate[:finder].should == :find_all_by_id
     end
+  end 
+  
+  describe "proxies" do
+    it "should use proxy" do
+      new_options(:proxy => :serializing_proxy).proxy?.should be_true
+    end
   end
 end

@@ -6,6 +6,11 @@ module AridCache
     # Provides methods to introspect the result.  The contents could be a base type,
     # or an enumerable of sorts...any type really.  We are only concerned with enumerables,
     # and especially those containing active records.
+    #
+    # TODO: a lot of this logic should be encompassed in the CachedResult.  It's probably
+    # a good idea to always cache a CachedResult and move the result-related methods
+    # into that class.  We have to keep whatever is cached as small as possible tho,
+    # so it's probably best to cache a Hash and load it with CachedResult.
     class ResultProcessor
 
       def initialize(result, opts={})
@@ -57,6 +62,9 @@ module AridCache
         @cached =
           if @options.proxy?
             Utilities.object_class(@options[:receiver]).send(@options[:proxy], @result)
+            if is_activerecord_reflection?
+              @result = @result.collect { |r| r } # force it to load
+            end
           elsif is_activerecord_reflection?
             lazy_cache.klass = @result.proxy_reflection.klass if @result.respond_to?(:proxy_reflection)
             if @options.count_only?
@@ -92,7 +100,12 @@ module AridCache
             end
           filtered = filter_results(results)
           if @cached.nil? && !@options.raw?
-            Utilities.object_class(@options[:receiver]).send(@options[:proxy], filtered)
+            proxy_result = Utilities.object_class(@options[:receiver]).send(@options[:proxy], filtered)
+            if filtered.is_a?(WillPaginate::Collection) && proxy_result.is_a?(Enumerable)
+              filtered.replace(proxy_result)
+            else
+              proxy_result
+            end
           else
             filtered
           end
