@@ -76,11 +76,23 @@ describe AridCache::CacheProxy::Options do
     it "should use find_all_by_id as the finder" do
       new_options.opts_for_paginate[:finder].should == :find_all_by_id
     end
-  end 
-  
+  end
+
   describe "proxies" do
     it "should use proxy" do
       new_options(:proxy => :serializing_proxy).proxy?.should be_true
+    end
+  end
+
+  describe "deprecated raw" do
+    it "should be deprecated" do
+      AridCache.expects(:raw_with_options).returns(false)
+      new_options(:raw => true).deprecated_raw?.should be_true
+    end
+
+    it "should not be deprecated" do
+      AridCache.expects(:raw_with_options).returns(true)
+      new_options(:raw => true).deprecated_raw?.should be_false
     end
   end
 end

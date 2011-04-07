@@ -6,14 +6,14 @@ module AridCache
       def initialize(opts={})
         self.merge!(opts)
       end
-      
+
       # Filter options for paginate.  Get the :per_page value from the receiver if it's not set.
       # Set total_entries to +records.size+ if +records+ is supplied
       def opts_for_paginate(records=nil)
         paginate_opts = reject { |k,v| !OPTIONS_FOR_PAGINATE.include?(k) }
         paginate_opts[:finder] = :find_all_by_id unless paginate_opts.include?(:finder)
         if self[:result_klass].respond_to?(:per_page) && !paginate_opts.include?(:per_page)
-          paginate_opts[:per_page] = self[:result_klass].per_page 
+          paginate_opts[:per_page] = self[:result_klass].per_page
         end
         paginate_opts[:total_entries] = records.size unless records.nil?
         paginate_opts
@@ -43,34 +43,38 @@ module AridCache
       # Returns options that affect the cache proxy result
       def opts_for_cache_proxy
         reject { |k,v| !OPTIONS_FOR_CACHE_PROXY.include?(k) }
-      end  
-      
+      end
+
       def force?
         !!self[:force]
-      end 
-      
+      end
+
       def paginate?
         include?(:page)
       end
-      
+
       def raw?
         !!self[:raw]
       end
-      
+
       def count_only?
         !!self[:count_only]
       end
-    
+
       def order_by_proc?
         include?(:order) && self[:order].is_a?(Proc)
       end
-      
+
       def order_by_key?
         include?(:order) && (self[:order].is_a?(Symbol) || self[:order].is_a?(String))
-      end  
-      
+      end
+
       def proxy?
         include?(:proxy)
+      end
+
+      def deprecated_raw?
+        !!(raw? && !AridCache.raw_with_options)
       end
     end
   end

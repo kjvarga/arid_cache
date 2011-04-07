@@ -20,7 +20,7 @@ describe AridCache do
         results[1].name.should == @company2.name
       end
     end
-  
+
     it "order should match the order option" do
       3.times do |t|
         results = Company.cached_ordered_by_name(:order => 'name DESC')
@@ -29,11 +29,17 @@ describe AridCache do
         results[1].name.should == @company1.name
       end
     end
-    
+
     it "with order option should go to the database to order" do
       lambda {
         Company.cached_ordered_by_name(:order => 'name DESC')
       }.should query(2)
     end
+  end
+
+  it "should set the special raw flag" do
+    AridCache.raw_with_options.should be_false
+    AridCache.raw_with_options = true
+    AridCache.raw_with_options.should be_true
   end
 end
