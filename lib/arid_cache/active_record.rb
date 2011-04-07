@@ -36,7 +36,9 @@ module AridCache
         elsif options[:auto_expire]
           self.cache_key
         else
-          "#{AridCache::Inflector.pluralize(self.class.name.downcase)}/#{self.id}"
+          result = "#{AridCache::Inflector.pluralize(self.class.name.downcase)}"
+          result += "/#{self[:id]}" if self.respond_to?(:[]) && !self[:id].nil?
+          result
         end
         'arid-cache-' + object_key + '-' + key.to_s
       end

@@ -61,10 +61,10 @@ module AridCache
         # because it loads up the target and passes the respond_to? on to it.
         @cached =
           if @options.proxy?
-            Utilities.object_class(@options[:receiver]).send(@options[:proxy], @result)
             if is_activerecord_reflection?
               @result = @result.collect { |r| r } # force it to load
             end
+            Utilities.object_class(@options[:receiver]).send(@options[:proxy], @result)
           elsif is_activerecord_reflection?
             lazy_cache.klass = @result.proxy_reflection.klass if @result.respond_to?(:proxy_reflection)
             if @options.count_only?

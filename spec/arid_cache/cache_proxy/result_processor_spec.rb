@@ -223,7 +223,6 @@ describe AridCache::CacheProxy::ResultProcessor do
         end
 
         def self.abc(records)
-          #debugger
           return records if records.empty?
           value = records.first.is_a?(ActiveRecord::Base) ? records.collect(&:attributes) : records.collect { |r| Company.find_by_id(r['id']) }
           value
