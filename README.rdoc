@@ -8,6 +8,7 @@ AridCache simplifies caching by supporting auto-expiring cache keys - as well as
 
 == Changes
 
+v1.3.1: Support proxies which allow you to control how your objects get serialized and unserialized
 v1.3.0: Support limits, ordering and pagination on cached Enumerables
 v1.2.0: Fix Rails 3 ActiveRecord hooks & remove some Rails dependencies
 v1.0.5: Support <tt>:raw</tt> and <tt>:clear</tt> options.
@@ -42,11 +43,12 @@ Then
 * Supports limits, ordering & pagination of cached Enumerables and ActiveRecord collections
 * Define caches and their options on your class using +instance_caches+ and +class_caches+
 * Counts for free - if you have already cached the result, you get the count for free
-* Supports eager-loading and other options to <tt>ActiveRecord::Base#find</tt> like
-:conditions, :include, :joins, :select, :readonly, :group, :having, :from
+* Smart counts - if you only ask for the count it will only calculate the count; useful when the result is an Association Reflection or a named scope.
+* Supports eager-loading and other options to <tt>ActiveRecord::Base#find</tt> like <tt>:conditions</tt>, <tt>:include</tt>, <tt>:joins</tt>, <tt>:select</tt>, <tt>:readonly</tt>, <tt>:group</tt>, <tt>:having</tt>, <tt>:from</tt>
 * Provides methods to clear caches individually, at the instance-level, class-level and globally
 * Preserves the order of your cached ActiveRecord collections
 * Optimized to make as few cache and database accesses as absolutely neccessary
+* Define your own cache proxy to serialize your objects as they go to and from the cache
 
 == Introduction
 
@@ -63,9 +65,24 @@ The way you interact with the cache via your model methods is to prepend the met
 
 You can also define caches that use compositions of methods or named scopes, or other complex queries, without having to add a new method to your class.  This way you can also create different caches that all use the same method.  For example,
 
-  User.cached_most_active_users do
-    active.find(:order => 'activity DESC', :limit => 5)
+  class User
+    named_scope :active, :conditions => { :active => true }
+    class_caches do
+      most_active_users(:limit => 5) do
+        active.find(:order => 'activity DESC')
+      end
+    end
   end
+
+This defines a cache +most_active_users+ on the User class which we can call with:
+
+  User.cached_most_active_users
+  >> [#<User>, #<User>]
+
+This will return up to five users, but there may be many more in the cache, because we didn't apply a limit in our call to <tt>active.find()</tt>.  We can also pass options to the call to override the stored options:
+
+  User.cached_most_active_users(:limit => 1)
+  >> [#<User>]
 
 === ActiveRecord Collections
 
@@ -358,6 +375,65 @@ In some circumstances - like when you are querying on a named scope - if you hav
         :ids => [2, 235, 236, 237]  # the ids array is seeded before returning
     }
 
+== Proxies
+
+Proxies allow you to do anything you want to your objects as they go into - and come out of - the cache.  They are most useful for serializing your objects, for example if you want to store JSON, or hashes.
+
+The <tt>:proxy</tt> option should be a Symbol giving the name of a class method.  The method is passed the result of your cache block (or method) as the first parameter, and in future may also pass a Hash of options.  The method is called on the class that calls +cached_+.
+
+A simple example of a proxy which stores hashes of ActiveRecord attributes:
+
+  class User
+    has_many :companies
+
+    instance_caches do
+      companies(:proxy => :serializing_proxy)
+    end
+
+    def self.serializing_proxy(records, *args)
+      return records if records.empty?
+      records.first.is_a?(ActiveRecord::Base) ? records.collect(&:attributes) : records.collect { |r| Company.find_by_id(r['id']) }
+    end
+  end
+
+Now when we first call <tt>User.first.cached_companies<tt> the cache is empty, so the cache method (<tt>companies</tt>) is called and the result is passed to <tt>User.serializing_proxy</tt> which converts the records to Hashes.  The result of the proxy is stored in the cache.  The next time we call <tt>User.first.cached_companies<tt> the cached result is retrieved and passed to <tt>User.serializing_proxy</tt> which converts the hashes to records, so we get ActiveRecords back.
+
+  @user = User.first
+  @user.cached_companies
+  >> [#<Company id: 1>, #<Company id: 2>]
+
+  @user.cached_companies(:raw => true)
+  >> [{ 'id' => 1 }, { 'id' => 2 }]
+
+The <tt>:raw</tt> option bypasses the proxy on the way out of the cache because we are asking for a raw result.  The <tt>:raw</tt> option works a bit differently from the default behaviour (which is to return a <tt>CachedResult</tt> object if the cached result is an ActiveRecord collection) because you can use options to do limiting, pagination and in-memory ordering with <tt>:raw</tt> to get different views of your cached enumerable.
+
+Proxies still support limits, pagination and ordering, which is applied to the cached result.  For example:
+
+Limits:
+
+  @user.cached_companies(:limit => 2, :offset => 1)
+  >> [#<Company id: 2>]
+
+Pagination returns a <tt>WillPaginate::Collection</tt>:
+
+  result = @user.cached_companies(:page => 2, :per_page => 1)
+  >> [#<Company id: 2>]
+  result.total_entries
+  >> 1
+  result.current_page
+  >> 2
+
+Order by:
+
+  @user.cached_companies(:order => Proc.new { |a, b| b['id'] <=> a['id'] })
+  >> [#<Company id: 2>, #<Company id: 1>]
+
+The above Proc orders by id reversed.  We can also combine all the options.  The order by will be applied first, then the limits and finally the pagination.
+
+All of the above calls work with <tt>raw => true</tt>.  With that option the results would be same but instead of returning records, it returns hashes.
+
+In practice you probably want to define your proxy method on <tt>ActiveRecord::Base</tt> so that it is available to all your models.  In future AridCache will probably have some built-in proxies that you can make use of.
+
 == Efficiency
 
 * AridCache intercepts calls to <tt>cached_</tt> methods using <tt>method_missing</tt> then defines those methods on your models as they are called, so they bypass method missing on subsequent calls.
@@ -383,7 +459,7 @@ For Ruby < 1.8.7 you probably want to include the following to extend the Array 
 == Known Issues
 
 1. <b>Caches that contains duplicate records will only return unique records on subsequent calls</b>.  This is because of the way <tt>find</tt> works when selecting multiple ids.  For example, if your query returns <tt>[#<User id: 1>, #<User id: 1>, #<User id: 1>]</tt>, the IDs are cached as <tt>[1,1,1]</tt>.  On the next call to the cache we load the IDs using <tt>User.find_all_by_id([1,1,1])</tt> which returns <tt>[#<User id: 1>]</tt>, not <tt>[#<User id: 1>, #<User id: 1>, #<User id: 1>]</tt> as you might have expected.
-2. <b>You can't cache polymorphic arrays</b> e.g. [#<User id: 1>, #<Pet id: 5>] because it expects all ActiveRecords to be of the same class.  We could accept a <tt>:polymorphic => true</tt> option but I don't think this is a great idea because instantiating all the records would result in a lot of queries to the individual tables.
+2. <b>You can't cache polymorphic arrays</b> e.g. [#<User id: 1>, #<Pet id: 5>] because it expects all ActiveRecords to be of the same class.  If you need polymorphism consider using a proxy.
 
 == Contributors
 

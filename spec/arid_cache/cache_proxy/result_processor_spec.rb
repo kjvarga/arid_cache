@@ -224,8 +224,7 @@ describe AridCache::CacheProxy::ResultProcessor do
 
         def self.abc(records)
           return records if records.empty?
-          value = records.first.is_a?(ActiveRecord::Base) ? records.collect(&:attributes) : records.collect { |r| Company.find_by_id(r['id']) }
-          value
+          records.first.is_a?(ActiveRecord::Base) ? records.collect(&:attributes) : records.collect { |r| Company.find_by_id(r['id']) }
         end
       end
 
