@@ -8,10 +8,11 @@ AridCache simplifies caching by supporting auto-expiring cache keys - as well as
 
 == Changes
 
-v1.3.1: Support proxies which allow you to control how your objects get serialized and unserialized
-v1.3.0: Support limits, ordering and pagination on cached Enumerables
-v1.2.0: Fix Rails 3 ActiveRecord hooks & remove some Rails dependencies
-v1.0.5: Support <tt>:raw</tt> and <tt>:clear</tt> options.
+* v1.3.2: <tt>AridCache.raw_with_options</tt> configuration for better <tt>:raw</tt> handling on cached ActiveRecord collections
+* v1.3.1: Proxy support which allow you to control how your objects get serialized and unserialized
+* v1.3.0: Support limits, ordering and pagination on cached Enumerables
+* v1.2.0: Fix Rails 3 ActiveRecord hooks & remove some Rails dependencies...almost Rails agnostic!
+* v1.0.5: Support <tt>:raw</tt> and <tt>:clear</tt> options.
 
 == Install
 
@@ -38,17 +39,17 @@ Then
 == Features
 
 * Include the AridCache module in any Class
-* Rails 2 & 3 compatible with automatic ActiveRecord::Base integration
-* Supports auto-expiring cache keys
-* Supports limits, ordering & pagination of cached Enumerables and ActiveRecord collections
+* <b>Rails 2 & 3 compatible</b> with automatic ActiveRecord::Base integration
+* Supports <b>auto-expiring cache keys</b>
+* Supports *limits*, *ordering* & *pagination* of cached Enumerables and ActiveRecord collections
 * Define caches and their options on your class using +instance_caches+ and +class_caches+
-* Counts for free - if you have already cached the result, you get the count for free
-* Smart counts - if you only ask for the count it will only calculate the count; useful when the result is an Association Reflection or a named scope.
-* Supports eager-loading and other options to <tt>ActiveRecord::Base#find</tt> like <tt>:conditions</tt>, <tt>:include</tt>, <tt>:joins</tt>, <tt>:select</tt>, <tt>:readonly</tt>, <tt>:group</tt>, <tt>:having</tt>, <tt>:from</tt>
-* Provides methods to clear caches individually, at the instance-level, class-level and globally
-* Preserves the order of your cached ActiveRecord collections
-* Optimized to make as few cache and database accesses as absolutely neccessary
-* Define your own cache proxy to serialize your objects as they go to and from the cache
+* <b>Counts for free</b> - if you have already cached the result, you get the count for free
+* <b>Smart counts</b> - if you only ask for the count it will only calculate the count; useful when the result is an Association Reflection or a named scope.
+* Supports <b>eager-loading</b> and other options to <tt>ActiveRecord::Base#find</tt> like <tt>:conditions</tt>, <tt>:include</tt>, <tt>:joins</tt>, <tt>:select</tt>, <tt>:readonly</tt>, <tt>:group</tt>, <tt>:having</tt>, <tt>:from</tt>
+* Provides methods to <b>clear caches</b> individually, at the instance-level, class-level and globally
+* <b>Preserves ordering</b> of your cached ActiveRecord collections
+* <b>Optimized</b> to make as few cache and database accesses as absolutely neccessary
+* Define your own <b>cache proxy</b> to serialize your objects as they go to and from the cache
 
 == Introduction
 
@@ -241,10 +242,6 @@ Or via the cache configuration,
     featured_albums
   end
 
-If you would like to be able to pass more options to your cache store (like <tt>:unless_exists</tt>, etc), just add them to the <tt>AridCache::CacheProxy::OPTIONS_FOR_CACHE</tt> class constant, for example
-
-  AridCache::CacheProxy::OPTIONS_FOR_CACHE.push(:raw, :unless_exist)
-
 == Extras
 
 === Cached Counts
@@ -333,15 +330,23 @@ For example, we could call:
 
 To return page two of the active users, with the <tt>preferences</tt> association eager-loaded for all the users.
 
-=== Accessing the cached IDs directly
+=== The <tt>:raw</tt> option & Accessing the cached IDs directly
 
-Sometimes you may want to access the cached list of record IDs without instantiating all the records.  This can be useful, for example, to determine if a particular track belongs to a user's favorite tracks.  If we have cached the list of favorite tracks, we just need to determine whether the track's ID appears in the cached list of IDs.
+When you cache a collection of ActiveRecords, the records IDs are stored in the cache in a <tt>AridCache::CacheProxy::CachedResult</tt> which is a <tt>Struct</tt> with methods to return the <tt>ids</tt>, <tt>count</tt> and <tt>klass</tt> of the cached records.
 
-The cached result is a <tt>AridCache::CacheProxy::Result</tt> and can be accessed by passing the <b><tt>:raw => true</tt></b> option in your cached call.  The <tt>AridCache::CacheProxy::Result</tt> is a type of <tt>Struct</tt> with methods to return the <tt>ids</tt>, <tt>count</tt> and <tt>klass</tt> of the cached records.
+Sometimes you may want to access what is in the cache without instantiating any records.  <tt>:raw => true</tt> is what you use for that.
 
-Note that passing the <tt>:raw</tt> option to your cache store is not supported, because the AridCache option shares the same name.  If you really want to get the marshalled result from your cache you will have to use <tt>cache.read</tt>, manually passing in the AridCache key and <tt>:raw</tt> option.
+The current (and deprecated) behaviour of <tt>:raw => true</tt> is to return the +CachedResult+ object and ignore all other options - if the cached result is an ActiveRecord collection.  Passing <tt>:raw => true</tt> when you have cached an Enumerable or some other base type does not share this behaviour.  For these types <tt>:raw => true</tt> returns whatever is in the cache, after applying all options.  This means that we can apply limits, ordering and pagination to our cached results and return the same type of data as is stored in the cache.
 
-Usage example:
+v1.3.2 introduces a new configuration option which makes the behaviour on cached ActiveRecord collections the same as for other cached types.  Set
+
+  AridCache.raw_with_options = true
+
+to enable the new behaviour.  With this option set, rather than return a <tt>CachedResult</tt> <tt>:raw => true<tt> will return the list of IDs itself, <b>after applying all options</b>.  So you can limit, order (with a Proc) and paginate the IDs before they are returned.  Keep in mind the <tt>:order</tt> Proc is applied <b>to the cached/raw data</tt>.
+
+Note that passing the <tt>:raw</tt> option to your cache store is not supported, because the AridCache option shares the same name.  If you really want to get the marshalled result from your cache you can do a cache read manually.
+
+The current (deprecated) behaviour:
 
   user = User.first
   user.cached_favorite_tracks  => returns [#<Track:1>, #<Track:2>]
@@ -353,7 +358,7 @@ Usage example:
       }
   user.cached_favorite_tracks(:raw => true).ids => returns [1, 2]
 
-The cache will be primed if it is empty, so you can be sure that it will always return a <tt>AridCache::CacheProxy::Result</tt>.
+The cache will be primed if it is empty, so you can be sure that it will always return a <tt>AridCache::CacheProxy::CachedResult</tt>.
 
 In some circumstances - like when you are querying on a named scope - if you have only requested a count, only the count is computed, which means the ids array is <tt>nil</tt>.  When you call your cached method passing in <tt>:raw => true</tt> AridCache detects that the ids array has not yet been set, so in this case it will perform a query to seed the ids array before returning the result.  This can be seen in the following example:
 
@@ -374,6 +379,18 @@ In some circumstances - like when you are querying on a named scope - if you hav
       :count => 4,
         :ids => [2, 235, 236, 237]  # the ids array is seeded before returning
     }
+
+With <tt>AridCache.raw_with_options = true</tt>:
+
+    user = User.first
+    user.cached_favorite_tracks
+    >> [#<Track:1>, #<Track:2>]
+    user.cached_favorite_tracks(:raw => true)
+    >> [1, 2]
+    user.cached_favorite_tracks(:order => Proc.new { |a, b| b <=> a }, :raw => true)
+    >> [2, 1]
+    user.cached_favorite_tracks(:offset => 1, :raw => true)
+    >> [2]
 
 == Proxies
 
@@ -450,16 +467,16 @@ For Ruby < 1.8.7 you probably want to include the following to extend the Array 
 
   Array.class_eval { alias count size }
 
-== Resources & Metrics
+== Resources
 
-
-* {RDoc}[http://rdoc.info/projects/kjvarga/arid_cache]
-* {GetCaliper Metrics}[http://getcaliper.com/caliper/project?repo=git%3A%2F%2Fgithub.com%2Fkjvarga%2Farid_cache.git]
+* {RDoc}[http://rdoc.info/github/kjvarga/arid_cache/master/frames]
 
 == Known Issues
 
 1. <b>Caches that contains duplicate records will only return unique records on subsequent calls</b>.  This is because of the way <tt>find</tt> works when selecting multiple ids.  For example, if your query returns <tt>[#<User id: 1>, #<User id: 1>, #<User id: 1>]</tt>, the IDs are cached as <tt>[1,1,1]</tt>.  On the next call to the cache we load the IDs using <tt>User.find_all_by_id([1,1,1])</tt> which returns <tt>[#<User id: 1>]</tt>, not <tt>[#<User id: 1>, #<User id: 1>, #<User id: 1>]</tt> as you might have expected.
-2. <b>You can't cache polymorphic arrays</b> e.g. [#<User id: 1>, #<Pet id: 5>] because it expects all ActiveRecords to be of the same class.  If you need polymorphism consider using a proxy.
+2. <b>You can't cache polymorphic arrays</b> e.g. [#<User id: 1>, #<Pet id: 5>] because it expects all ActiveRecords to be of the same class.  If you need polymorphism consider using a proxy and do the record-loading yourself.
+3. Rails ActiveRecord (or SQL) has a quirk where if you pass an +offset+ without a +limit+ the +offset+ is ignored.  AridCache fixes this unexpected behaviour by including a +limit+ on its queries.
+4. When you use the <tt>:order</tt> option with a cached ActiveRecord collection we have to go to the database to order.  So we also do pagination and limiting there because we want to retrieve as few records as possible.  So we use WillPaginate's ActiveRecord::Base#paginate method.  Unfortunately if you pass <tt>:limit</tt> or <tt>:offset</tt> in addition to your pagination options, the limit and offset are ignored.  This is not the behaviour when interacting with other cached types.  In that case we apply the order, then the limits and finally the pagination, which is what you would expect.
 
 == Contributors
 
@@ -470,7 +487,6 @@ Contributions are welcome!  Please,
 * Add tests for it (this is important so I don't break it in a future release).
 * Commit (don't mess with the Rakefile, version, or history).
 * Send me a pull request.
-
 
 ==== Thank-you to these contributors to AridCache:
 
