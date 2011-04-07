@@ -1,8 +1,8 @@
 # A sample Gemfile
 source "http://rubygems.org"
 
-gem 'activerecord', '=2.3.8'
-gem 'activesupport', '=2.3.8'
+gem 'activerecord', '=2.3.11'
+gem 'activesupport', '=2.3.11'
 gem 'sqlite3-ruby', '=1.3.1'
 
 gem 'will_paginate', '=2.3.15'
