@@ -5,11 +5,11 @@
 
 Gem::Specification.new do |s|
   s.name = %q{arid_cache}
-  s.version = "1.3.0"
+  s.version = "1.3.1"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Karl Varga"]
-  s.date = %q{2011-04-05}
+  s.date = %q{2011-04-06}
   s.description = %q{AridCache makes caching easy and effective.  AridCache supports caching on all your model named scopes, class methods and instance methods right out of the box.  AridCache prevents caching logic from cluttering your models and clarifies your logic by making explicit calls to cached result sets.
 AridCache is designed for handling large, expensive ActiveRecord collections but is equally useful for caching anything else as well.
 }
