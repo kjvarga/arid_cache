@@ -355,4 +355,41 @@ describe AridCache::CacheProxy::ResultProcessor do
       end
     end
   end
+  
+  describe "raw with options handling" do
+    before :each do
+      AridCache.raw_with_options = true 
+      @user = User.make
+      @company1 = Company.make
+      @company2 = Company.make
+      @user.companies << @company1
+      @user.companies << @company2
+      class User
+        instance_caches do
+          raw_companies(:raw => true) { companies }
+        end
+      end
+    end
+    
+    it "should return ids" do
+      @user.cached_raw_companies.should == [@company1.id, @company2.id]
+    end                                               
+
+    it "should apply order" do
+      @user.cached_raw_companies(:order => Proc.new { |a,b| b <=> a }).should == [@company2.id, @company1.id]
+    end    
+    
+    it "should apply offset and limit" do
+      @user.cached_raw_companies(:limit => 1).should == [@company1.id]
+      @user.cached_raw_companies(:offset => 1).should == [@company2.id]
+    end
+    
+    it "should apply pagination" do
+      value = @user.cached_raw_companies(:page => 2, :per_page => 1)
+      value.should be_a(WillPaginate::Collection)
+      value.total_entries.should == 1
+      value.current_page.should = 2
+      value.should == [@company2.id]
+    end
+  end
 end
