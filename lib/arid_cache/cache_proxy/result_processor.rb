@@ -36,7 +36,7 @@ module AridCache
       # Order in the database if an order clause has been specified and we
       # have a list of ActiveRecords or a CachedResult.
       def order_in_database?
-        is_cached_result? || (@options.order_by_key? && is_activerecord?)
+        (is_cached_result? && !@options.raw?) || (@options.order_by_key? && is_activerecord?)
       end
 
       # Return true if the result is an enumerable and the first item is
@@ -89,10 +89,9 @@ module AridCache
       def to_result
         if @options.count_only?
           get_count
-        elsif is_cached_result? && @options.raw?
-          @result
+
         elsif @options.proxy?
-          results = 
+          results =
             if @cached.nil? || !@options.raw?
               @result
             else
@@ -109,6 +108,21 @@ module AridCache
           else
             filtered
           end
+
+        elsif @options.raw?
+
+          result =
+            if @cached.is_a?(AridCache::CacheProxy::CachedResult)
+              @cached
+            else
+              @result
+            end
+          if @options.deprecated_raw?
+            result
+          else
+            filter_results(result.is_a?(AridCache::CacheProxy::CachedResult) ? result.ids : result)
+          end
+
         elsif is_cached_result?
           fetch_activerecords(filter_results(@result.ids))
         elsif order_in_database?
