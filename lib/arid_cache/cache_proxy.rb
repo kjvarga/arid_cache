@@ -71,7 +71,6 @@ module AridCache
       @options = Options.new(@blueprint.nil? ? opts : @blueprint.opts.merge(opts))
       @options[:receiver] = receiver
       @cache_key = @receiver.arid_cache_key(@method, @options.opts_for_cache_key)
-      @cached = Rails.cache.read(@cache_key, @options.opts_for_cache)
     end
 
     #
@@ -99,14 +98,14 @@ module AridCache
       # Return a ResultProcessor instance.  Seed the cache if we need to, otherwise
       # use what is in the cache.
       def result_processor
-        seed_cache? ? seed_cache : ResultProcessor.new(@cached, @options)
+        seed_cache? ? seed_cache : ResultProcessor.new(cached, @options)
       end
 
       # Return a boolean indicating whether we need to seed the cache.  Seed the cache
       # if :force => true, the cache is empty or records have been requested and there
       # are none in the cache yet.
       def seed_cache?
-        @cached.nil? || @options.force? || (@cached.is_a?(CachedResult) && !@options.count_only? && !@cached.has_ids?)
+        cached.nil? || @options.force? || (cached.is_a?(CachedResult) && !@options.count_only? && !cached.has_ids?)
       end
 
       # Seed the cache by executing the stored block (or by calling a method on the object)
@@ -122,6 +121,15 @@ module AridCache
 
       def write_cache(data)
         Rails.cache.write(@cache_key, data, @options.opts_for_cache)
+      end
+
+      # Return the contents of the cache.  Read from the cache if we have not yet done so.
+      def cached
+        unless @cached_initialized
+          @cached = Rails.cache.read(@cache_key, @options.opts_for_cache)
+          @cached_initialized = true
+        end
+        @cached
       end
   end
 end
