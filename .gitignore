@@ -17,8 +17,7 @@ tmtags
 coverage
 rdoc
 pkg
-Gemfile.lock
-.bundle/*
+.bundle
 
 ## PROJECT::SPECIFIC
 test/**/*.log

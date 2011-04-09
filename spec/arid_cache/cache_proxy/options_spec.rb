@@ -86,12 +86,12 @@ describe AridCache::CacheProxy::Options do
 
   describe "deprecated raw" do
     it "should be deprecated" do
-      AridCache.expects(:raw_with_options).returns(false)
+      mock(AridCache).raw_with_options { false }
       new_options(:raw => true).deprecated_raw?.should be_true
     end
 
     it "should not be deprecated" do
-      AridCache.expects(:raw_with_options).returns(true)
+      mock(AridCache).raw_with_options { true }
       new_options(:raw => true).deprecated_raw?.should be_false
     end
   end

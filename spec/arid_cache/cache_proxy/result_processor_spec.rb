@@ -18,7 +18,10 @@ describe AridCache::CacheProxy::ResultProcessor do
       @result.is_hashes?.should be_false
       @result.is_cached_result?.should be_false
       @result.order_in_database?.should be_false
-      @result.to_cache.should be_a(AridCache::CacheProxy::CachedResult)
+    end
+
+    it "should be cached as an array" do
+      @result.to_cache.should be_a(Array)
     end
   end
 

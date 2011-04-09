@@ -15,7 +15,7 @@ Dir[File.expand_path(File.join(File.dirname(__FILE__),'support','**','*.rb'))].e
 
 Spec::Runner.configure do |config|
   include ActiveRecordQueryMatchers
-  config.mock_with :mocha
+  config.mock_with :rr
 
   config.before(:all) do
     Sham.reset(:before_all)

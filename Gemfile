@@ -14,5 +14,5 @@ gem 'machinist', '=1.0.6'
 gem 'faker', '=0.3.1'
 gem 'rspec', '~>1.3.1', :require => 'spec'
 gem 'test-unit', '=1.2.3'
-gem 'mocha', '=0.9.8'
 gem 'arid_cache', :path => "./"
+gem 'rr', '~>1.0.2'

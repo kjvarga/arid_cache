@@ -105,7 +105,7 @@ module AridCache
       # if :force => true, the cache is empty or records have been requested and there
       # are none in the cache yet.
       def seed_cache?
-        cached.nil? || @options.force? || (cached.is_a?(CachedResult) && !@options.count_only? && !cached.has_ids?)
+        cached.nil? || @options.force? || (cached.is_a?(CachedResult) && !@options.count_only? && !cached.has_ids? && cached.klass != NilClass)
       end
 
       # Seed the cache by executing the stored block (or by calling a method on the object)
@@ -119,6 +119,7 @@ module AridCache
         @result
       end
 
+      # Write +data+ to the cache
       def write_cache(data)
         Rails.cache.write(@cache_key, data, @options.opts_for_cache)
       end
@@ -127,7 +128,7 @@ module AridCache
       def cached
         unless @cached_initialized
           @cached = Rails.cache.read(@cache_key, @options.opts_for_cache)
-          @cached_initialized = true
+          @cached_initialized = true # so we don't read multiple times when the value is nil
         end
         @cached
       end

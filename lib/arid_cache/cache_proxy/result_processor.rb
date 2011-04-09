@@ -74,10 +74,12 @@ module AridCache
               lazy_cache.count = @result.size
             end
             lazy_cache
-          elsif is_activerecord? || is_empty?
+          elsif is_activerecord?
             lazy_cache.ids = @result.collect { |r| r[:id] }
             lazy_cache.count = @result.size
             lazy_cache.klass = @result.first.class
+            lazy_cache
+          elsif @result.nil? # so we can distinguish a cached nil vs an empty cache
             lazy_cache
           else
             @result
@@ -109,8 +111,10 @@ module AridCache
             filtered
           end
 
-        elsif @options.raw?
+        elsif (@cached || @result).is_a?(AridCache::CacheProxy::CachedResult) && (@cached || @result).klass == NilClass
+          nil
 
+        elsif @options.raw?
           result =
             if @cached.is_a?(AridCache::CacheProxy::CachedResult)
               @cached
