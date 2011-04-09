@@ -1,6 +1,10 @@
 require 'spec_helper'
 
 describe AridCache::CacheProxy do
+  before :all do
+    AridCache.store.delete! # so no options get stored
+  end
+
   describe "with raw => true" do
     before :each do
       @user = User.make

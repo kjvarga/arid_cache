@@ -6,6 +6,10 @@ describe AridCache::CacheProxy::ResultProcessor do
     AridCache::CacheProxy::ResultProcessor.new(value, opts)
   end
 
+  before :all do
+    AridCache.store.delete! # so no options get stored and interfere with other tests
+  end
+
   describe "empty array" do
     before :each do
       @result = new_result([])
@@ -256,7 +260,6 @@ describe AridCache::CacheProxy::ResultProcessor do
 
       # Comparing the hashes directly doesn't work because the updated_at Time are
       # not considered equal...don't know why, cause the to_s looks the same.
-      # debugger
       value.should be_a(Array)
       value.first.should be_a(Hash)
       value.first.each_pair do |k, v|
@@ -264,7 +267,7 @@ describe AridCache::CacheProxy::ResultProcessor do
       end
 
       # Cache is seeded, it should use the cached result
-      User.expects(:abc).never
+      dont_allow(User).abc
       value = @user.cached_companies(:raw => true)
       value.should be_a(Array)
       value.first.should be_a(Hash)
