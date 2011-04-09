@@ -23,7 +23,7 @@ module AridCache
       end
 
       def klass
-        self['klass'].constantize unless self['klass'].nil?
+        self[:klass].respond_to?(:constantize) ? self['klass'].constantize : self['klass']
       end
     end
 

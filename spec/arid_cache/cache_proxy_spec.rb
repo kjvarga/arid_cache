@@ -207,4 +207,38 @@ describe AridCache::CacheProxy do
       result.total_entries.should == @o.result.size
     end
   end
+
+  describe "CachedResult" do
+    before :each do
+      class User
+        instance_caches do
+          get_result
+        end
+
+        def get_result
+          AridCache::CacheProxy::CachedResult.new(companies.collect(&:id), Company, companies.count)
+        end
+      end
+      @user = User.make
+      @user.companies << Company.make
+      @user.companies << Company.make
+    end
+
+    it "should store a CachedResult" do
+      @user.cached_get_result
+      Rails.cache.read(@user.arid_cache_key(:get_result)).should == @user.get_result
+    end
+
+    it "should return records" do
+      @user.cached_get_result.should == @user.companies
+    end
+
+    it "should return a count" do
+      @user.cached_get_result_count.should == @user.companies.count
+    end
+
+    it "should return the CachedResult with :raw => true" do
+      @user.cached_get_result(:raw => true).should == @user.get_result
+    end
+  end
 end
