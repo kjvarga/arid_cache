@@ -66,10 +66,10 @@ module AridCache
             end
             Utilities.object_class(@options[:receiver]).send(@options[:proxy], @result)
           elsif is_activerecord_reflection?
-            lazy_cache.klass = @result.proxy_reflection.klass if @result.respond_to?(:proxy_reflection)
             if @options.count_only?
               lazy_cache.count = @result.count
             else
+              lazy_cache.klass = @result.proxy_reflection.klass if @result.respond_to?(:proxy_reflection)
               lazy_cache.ids = @result.collect { |r| r[:id] }
               lazy_cache.count = @result.size
             end
@@ -80,6 +80,7 @@ module AridCache
             lazy_cache.klass = @result.first.class
             lazy_cache
           elsif @result.nil? # so we can distinguish a cached nil vs an empty cache
+            lazy_cache.klass = NilClass
             lazy_cache
           else
             @result
@@ -148,13 +149,9 @@ module AridCache
         end
       end
 
-      # Lazy-initialize a new cached result.  Default the klass of the result to
-      # that of the receiver.
+      # Lazy-initialize a new cached result.
       def lazy_cache
-        return @lazy_cache if @lazy_cache
-        @lazy_cache = AridCache::CacheProxy::CachedResult.new
-        @lazy_cache.klass = @options[:result_klass]
-        @lazy_cache
+        @lazy_cache ||= AridCache::CacheProxy::CachedResult.new
       end
 
       # Return the result after processing it to apply limits or pagination in memory.
@@ -237,7 +234,7 @@ module AridCache
 
       # Return the klass to use for building results (only applies to ActiveRecord results)
       def result_klass
-        @options[:result_klass] = is_cached_result? ? @result.klass : (@cached.is_a?(AridCache::CacheProxy::CachedResult) ? @cached.klass : Utilities.object_class(@options[:receiver]))
+        is_cached_result? ? @result.klass : (@cached.is_a?(AridCache::CacheProxy::CachedResult) ? @cached.klass : Utilities.object_class(@options[:receiver]))
       end
     end
   end
