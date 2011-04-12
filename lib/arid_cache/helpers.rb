@@ -40,7 +40,7 @@ module AridCache
     #
     # @return an AridCache::Store::Blueprint.
     def define(object, key, opts, fetch_method=:fetch, method_name=nil, &block)
-      
+
       # FIXME: Pass default options to store.add
       # Pass nil in for now until we get the cache_ calls working.
       # This means that the first time you define a dynamic cache
@@ -59,6 +59,12 @@ module AridCache
       blueprint = AridCache.store.add_object_cache_configuration(object, key, nil, block)
       method_for_cached(object, key, fetch_method, method_name)
       blueprint
+    end
+
+    def subclasses_of(parent)
+      result = []
+      ObjectSpace.each_object(Class) { |klass| result << klass if klass < parent }
+      result
     end
 
     private
@@ -82,5 +88,5 @@ module AridCache
       object = (class << object; self; end) if object.is_a?(Class)
       object.class_eval(method_body, __FILE__, __LINE__)
     end
-  end  
+  end
 end
