@@ -69,7 +69,15 @@ module AridCache
     class ClassCacheConfiguration    < Configuration; end #:nodoc:
 
     def has?(object, key)
-      self.include?(object_store_key(object, key))
+      return true if self.include?(object_store_key(object, key))
+
+      store_key = object.is_a?(Class) ? :class_store_key : :instance_store_key
+      klass = object.is_a?(Class) ? object : object.class
+      while klass.superclass
+        return true if self.include?(send(store_key, klass.superclass, key))
+        klass = klass.superclass
+      end
+      false
     end
 
     # Empty the proc store
@@ -82,7 +90,7 @@ module AridCache
     end
 
     def find(object, key)
-      self[object_store_key(object, key)]
+      inherited_find(object, key)
     end
 
     def add_instance_cache_configuration(klass, key, opts, proc)
@@ -100,18 +108,7 @@ module AridCache
     protected
 
     def add_generic_cache_configuration(store_key, object, key, opts, proc)
-      blueprint = AridCache::Store::Blueprint.new(object, key, opts, proc)
-      klass = object.is_a?(Class) ? object : object.class
-      store_key = object.is_a?(Class) ? :instance_store_key : :class_store_key
-      while klass.superclass
-        super_blueprint = send(store_key, klass.superclass, key)
-        if self.include?(super_blueprint)
-          blueprint.opts = self[super_blueprint]['opts'].merge(blueprint['opts'])
-          blueprint['proc'] ||= self[super_blueprint]['proc']
-        end
-        klass = klass.superclass
-      end
-      self[store_key] = blueprint
+      self[store_key] = AridCache::Store::Blueprint.new(object, key, opts, proc)
     end
 
     def initialize
@@ -121,6 +118,28 @@ module AridCache
     def instance_store_key(klass, key); AridCache::Inflector.pluralize(klass.name.downcase) + '-' + key.to_s; end
     def object_store_key(object, key)
       case object; when Class; class_store_key(object, key); else; instance_store_key(object.class, key); end
+    end
+
+    def inherited_find(object, key)
+      blueprint = self[object_store_key(object, key)] || AridCache::Store::Blueprint.new(object, key)
+      inherit_options(blueprint, object, key)
+      if blueprint.opts.empty? && blueprint['proc'].nil?
+        nil
+      else
+        blueprint
+      end
+    end
+
+    def inherit_options(blueprint, object, key)
+      klass = object.is_a?(Class) ? object : object.class
+      store_key = object.is_a?(Class) ? :class_store_key : :instance_store_key
+      while klass.superclass
+        if super_blueprint = self[send(store_key, klass.superclass, key)]
+          blueprint.opts = super_blueprint.opts.merge(blueprint.opts)
+          blueprint['proc'] ||= super_blueprint['proc']
+        end
+        klass = klass.superclass
+      end
     end
   end
 end

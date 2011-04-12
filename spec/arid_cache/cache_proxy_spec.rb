@@ -241,4 +241,85 @@ describe AridCache::CacheProxy do
       @user.cached_get_result(:raw => true).should == @user.get_result
     end
   end
+
+  describe "inheritance" do
+    before :each do
+      class Abc
+        include AridCache
+        instance_caches do
+          name(:limit => 2, :expires_in => 1) { 'abc' }
+        end
+
+        def inherited_method
+          'inherited'
+        end
+      end
+
+      class Def < Abc
+        instance_caches do
+          name(:limit => 1, :expires_in => 2) { 'def' }
+          call_name { name }
+        end
+      end
+
+      class Xyz < Def
+        instance_caches do
+          name(:limit => 3) # should use the block from the superclass
+        end
+
+        def name
+          'xyz'
+        end
+      end
+      @abc = Abc.new
+      @def = Def.new
+      @xyz = Xyz.new
+    end
+
+    it "should inherit procs and options from subclasses" do
+      @abc.cached_name.should == 'ab'
+      @def.cached_name.should == 'd'
+      @xyz.cached_name.should == 'def'
+    end
+
+    it "should inherit options" do
+      AridCache.store.find(@xyz, 'name').opts[:expires_in].should == 2
+    end
+
+    it "should inherit caches" do
+      @xyz.should respond_to(:cached_call_name)
+    end
+
+    it "should evaluate inherited caches in the right instance" do
+      @xyz.cached_call_name.should == 'xyz'
+      lambda {
+        @def.cached_call_name
+      }.should raise_error(NameError)
+    end
+
+    it "should inherit methods" do
+      @abc.cached_inherited_method.should == 'inherited'
+      @def.cached_inherited_method.should == 'inherited'
+      @xyz.cached_inherited_method.should == 'inherited'
+    end
+  end
+
+  # describe "reserved names" do
+  #   before :each do
+  #     @obj = Class.new do
+  #       include AridCache
+  #       instance_caches do
+  #         debugger
+  #         test(:expires_in => 1)
+  #       end
+  #       def test
+  #         true
+  #       end
+  #     end.new
+  #   end
+  #
+  #   it "should support a cache named test" do
+  #     @obj.cached_test
+  #   end
+  # end
 end
