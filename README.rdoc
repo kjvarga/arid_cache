@@ -8,7 +8,7 @@ AridCache simplifies caching by supporting auto-expiring cache keys - as well as
 
 == Changes
 
-* v1.3.4: Inherited caches: Caches, cache options and cache blocks are inherited by all subclasses
+* v1.3.4: Inherited cache configurations: Cache options and cache blocks are inherited from superclasses
 * v1.3.2: <tt>AridCache.raw_with_options</tt> configuration for better <tt>:raw</tt> handling on cached ActiveRecord collections
 * v1.3.1: Proxy support which allow you to control how your objects get serialized and unserialized
 * v1.3.0: Support limits, ordering and pagination on cached Enumerables
@@ -52,7 +52,7 @@ Then
 * <b>Preserves ordering</b> of your cached ActiveRecord collections
 * <b>Optimized</b> to make as few cache and database accesses as absolutely neccessary
 * Define your own <b>cache proxy</b> to serialize your objects as they go to and from the cache
-* <b>Inherited caches</b> - subclasses inherit all caches, cache options and blocks from superclasses.
+* <b>Inherited cache configurations</b> - subclasses inherit cache options and cache blocks from superclasses.
 
 == Introduction
 
@@ -453,6 +453,50 @@ The above Proc orders by id reversed.  We can also combine all the options.  The
 All of the above calls work with <tt>raw => true</tt>.  With that option the results would be same but instead of returning records, it returns hashes.
 
 In practice you probably want to define your proxy method on <tt>ActiveRecord::Base</tt> so that it is available to all your models.  In future AridCache will probably have some built-in proxies that you can make use of.
+
+== Inherited Cache Options
+
+Subclasses automatically inherit cache definitions from their superclasses.  The options for a particular cache are merged, with options from subclasses overriding the superclass.  If a superclass defines a block for that cache, the one from the closest ancestor is used.
+
+Here is a simple example:
+
+  class Abc
+    include AridCache
+    instance_caches do
+      name(:limit => 2) { 'abc' }
+      actual_name(:limit => 2)
+    end
+
+    def actual_name
+      'abc'
+    end
+  end
+
+  class Def < Abc
+    instance_caches do
+      name(:limit => 1)
+      actual_name(:limit => 1)
+    end
+
+    def actual_name
+      'def'
+    end
+  end
+
+  > a, d = Abc.new, Def.new
+  > a.cached_name
+  "ab"
+  > a.cached_actual_name
+  "ab"
+  > d.cached_name
+  "a"
+
+So here +cached_name+ is using its own <tt>:limit => 1</tt> with the block from +Abc+.  So it's returning the first character of 'abc'.
+
+  > d.cached_actual_name
+  "d"
+
+Here +cached_actual_name+ is using its own <tt>:limit => 1</tt> but since no ancestor class defines a block on the cache, it uses the method from the instance.  So it's returning the first character of 'def'.
 
 == Efficiency
 
