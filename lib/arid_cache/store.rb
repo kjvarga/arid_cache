@@ -82,7 +82,6 @@ module AridCache
     end
 
     def find(object, key)
-      
       self[object_store_key(object, key)]
     end
 
@@ -100,8 +99,19 @@ module AridCache
 
     protected
 
-    def add_generic_cache_configuration(store_key, *args)
-      self[store_key] = AridCache::Store::Blueprint.new(*args)
+    def add_generic_cache_configuration(store_key, object, key, opts, proc)
+      blueprint = AridCache::Store::Blueprint.new(object, key, opts, proc)
+      klass = object.is_a?(Class) ? object : object.class
+      store_key = object.is_a?(Class) ? :instance_store_key : :class_store_key
+      while klass.superclass
+        super_blueprint = send(store_key, klass.superclass, key)
+        if self.include?(super_blueprint)
+          blueprint.opts = self[super_blueprint]['opts'].merge(blueprint['opts'])
+          blueprint['proc'] ||= self[super_blueprint]['proc']
+        end
+        klass = klass.superclass
+      end
+      self[store_key] = blueprint
     end
 
     def initialize
