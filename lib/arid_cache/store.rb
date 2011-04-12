@@ -82,6 +82,7 @@ module AridCache
     end
 
     def find(object, key)
+      
       self[object_store_key(object, key)]
     end
 
@@ -95,15 +96,6 @@ module AridCache
 
     def add_object_cache_configuration(object, key, opts, proc)
       add_generic_cache_configuration(object_store_key(object, key), object, key, opts, proc)
-    end
-
-    def find_or_create(object, key)
-      store_key = object_store_key(object, key)
-      if self.include?(store_key)
-        self[store_key]
-      else
-        self[store_key] = AridCache::Store::Blueprint.new(object, key)
-      end
     end
 
     protected
