@@ -8,6 +8,7 @@ AridCache simplifies caching by supporting auto-expiring cache keys - as well as
 
 == Changes
 
+* v1.3.4: Inherited caches: Caches, cache options and cache blocks are inherited by all subclasses
 * v1.3.2: <tt>AridCache.raw_with_options</tt> configuration for better <tt>:raw</tt> handling on cached ActiveRecord collections
 * v1.3.1: Proxy support which allow you to control how your objects get serialized and unserialized
 * v1.3.0: Support limits, ordering and pagination on cached Enumerables
@@ -40,7 +41,8 @@ Then
 
 * Include the AridCache module in any Class
 * <b>Rails 2 & 3 compatible</b> with automatic ActiveRecord::Base integration
-* Supports <b>auto-expiring cache keys</b>
+* Auto-generated namespaced cache keys
+* <b>auto-expiring cache keys</b> - your cache expires when the updated_at timestamp changes
 * Supports *limits*, *ordering* & *pagination* of cached Enumerables and ActiveRecord collections
 * Define caches and their options on your class using +instance_caches+ and +class_caches+
 * <b>Counts for free</b> - if you have already cached the result, you get the count for free
@@ -50,6 +52,7 @@ Then
 * <b>Preserves ordering</b> of your cached ActiveRecord collections
 * <b>Optimized</b> to make as few cache and database accesses as absolutely neccessary
 * Define your own <b>cache proxy</b> to serialize your objects as they go to and from the cache
+* <b>Inherited caches</b> - subclasses inherit all caches, cache options and blocks from superclasses.
 
 == Introduction
 
