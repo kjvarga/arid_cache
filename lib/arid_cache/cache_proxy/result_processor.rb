@@ -18,9 +18,9 @@ module AridCache
         @options = opts.is_a?(AridCache::CacheProxy::Options) ? opts : AridCache::CacheProxy::Options.new(opts)
       end
 
-      # Return true if the result is an enumerable and it is empty.
+      # Return true if the result is an array and it is empty.
       def is_empty?
-        is_enumerable? && @result.empty?
+        @result.is_a?(Array) && @result.empty?
       end
 
       # Return true if the result is an enumerable.
@@ -79,6 +79,11 @@ module AridCache
             lazy_cache.count = @result.size
             lazy_cache.klass = @result.first.class
             lazy_cache
+          elsif is_empty? && !AridCache.raw_with_options # deprecated behaviour
+            lazy_cache.ids = @result
+            lazy_cache.count = 0
+            lazy_cache.klass = result_klass
+            lazy_cache            
           elsif @result.nil? # so we can distinguish a cached nil vs an empty cache
             lazy_cache.klass = NilClass
             lazy_cache

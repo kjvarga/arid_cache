@@ -11,62 +11,61 @@ describe AridCache::CacheProxy do
       @user.companies << Company.make
       @user.companies << Company.make
       @user.clear_instance_caches
+      AridCache.raw_with_options = true
     end
 
-    describe "with options" do
-      before :all do
-        AridCache.raw_with_options = true
-      end
+    after :all do
+      AridCache.raw_with_options = false
+    end
 
-      after :all do
-        AridCache.raw_with_options = false
-      end
+    it "should use the new raw handling" do
+      AridCache.raw_with_options.should be_true
+    end
 
-      it "should use the new raw handling" do
-        AridCache.raw_with_options.should be_true
-      end
+    it "should return raw results" do
+      @user.cached_companies(:raw => true).should == @user.companies.collect(&:id)
+    end
 
-      it "should return raw results" do
-        @user.cached_companies(:raw => true).should == @user.companies.collect(&:id)
-      end
+    it "result should have the same ids as the normal result" do
+      @user.cached_companies(:raw => true).should == @user.cached_companies.collect(&:id)
+    end
 
-      it "result should have the same ids as the normal result" do
-        @user.cached_companies(:raw => true).should == @user.cached_companies.collect(&:id)
-      end
+    it "should ignore :raw => false" do
+      @user.cached_companies(:raw => false).should == @user.cached_companies
+    end
 
-      it "should ignore :raw => false" do
-        @user.cached_companies(:raw => false).should == @user.cached_companies
-      end
+    it "should only query once to seed the cache, ignoring all other options" do
+      lambda { @user.cached_companies(:raw => true, :limit => 0, :order => 'nonexistent_column desc') }.should query(1)
+    end
 
-      it "should only query once to seed the cache, ignoring all other options" do
-        lambda { @user.cached_companies(:raw => true, :limit => 0, :order => 'nonexistent_column desc') }.should query(1)
-      end
+    it "should apply options even if the cache has already been seeded" do
+      lambda {
+        companies = @user.cached_companies
+        @user.cached_companies(:raw => true, :limit => 1).should == companies.collect(&:id)[0,1]
+      }.should query(1)
+    end
 
-      it "should apply options even if the cache has already been seeded" do
-        lambda {
-          companies = @user.cached_companies
-          @user.cached_companies(:raw => true, :limit => 1).should == companies.collect(&:id)[0,1]
-        }.should query(1)
-      end
+    it "should not use the raw option when reading from the cache" do
+      mock.proxy(Rails.cache).read(@user.arid_cache_key(:companies), {})
+      @user.cached_companies(:raw => true)
+    end
 
-      it "should not use the raw option when reading from the cache" do
-        mock.proxy(Rails.cache).read(@user.arid_cache_key(:companies), {})
-        @user.cached_companies(:raw => true)
+    it "should work for calls to a method that ends with _count" do
+      @user.cached_bogus_count do
+        10
       end
+      @user.cached_bogus_count(:raw => true).should == 10
+    end
 
-      it "should work for calls to a method that ends with _count" do
-        @user.cached_bogus_count do
-          10
-        end
-        @user.cached_bogus_count(:raw => true).should == 10
-      end
-
-      it "should work for calls to a method that ends with _count" do
-        @user.cached_companies_count(:raw => true).should == @user.cached_companies_count
-      end
+    it "should work for calls to a method that ends with _count" do
+      @user.cached_companies_count(:raw => true).should == @user.cached_companies_count
     end
 
     describe "deprecated" do
+      before :each do
+        AridCache.raw_with_options = false
+      end                                 
+      
       it "should use the deprecated handling" do
         AridCache.raw_with_options.should be_false
       end
@@ -108,6 +107,25 @@ describe AridCache::CacheProxy do
 
       it "should work for calls to a method that ends with _count" do
         @user.cached_companies_count(:raw => true).should == @user.cached_companies_count
+      end
+
+      describe "empty array" do
+        before :each do
+          @user.cached_empty_array { [] }
+        end
+
+        it "should be stored as a CachedResult" do
+          @user.cached_empty_array(:raw => true).should be_a(AridCache::CacheProxy::CachedResult)
+        end
+
+        it "should have the class of the receiver" do
+          @user.cached_empty_array(:raw => true).klass.should be(User)
+        end
+
+        it "should return a CachedResult when the cache is empty" do
+          @user.cached_empty_array(:clear => true)
+          @user.cached_empty_array(:raw => true).should be_a(AridCache::CacheProxy::CachedResult)
+        end
       end
     end
   end

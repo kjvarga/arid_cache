@@ -8,6 +8,7 @@ AridCache simplifies caching by supporting auto-expiring cache keys - as well as
 
 == Changes
 
+* v1.3.5: Backwards-compatibility fix for caching an empty array with <tt>:raw => true</tt>
 * v1.3.4: Inherited cache configurations: Cache options and cache blocks are inherited from superclasses
 * v1.3.2: <tt>AridCache.raw_with_options</tt> configuration for better <tt>:raw</tt> handling on cached ActiveRecord collections
 * v1.3.1: Proxy support which allow you to control how your objects get serialized and unserialized

@@ -9,7 +9,8 @@ describe AridCache::Helpers do
     end
     
     it "should description" do
-      AridCache.subclasses_of(Aa).should == [Cc, Bb]
+      AridCache.subclasses_of(Aa).should include(Cc)
+      AridCache.subclasses_of(Aa).should include(Bb)
       AridCache.subclasses_of(Bb).should == [Cc]
     end
   end
