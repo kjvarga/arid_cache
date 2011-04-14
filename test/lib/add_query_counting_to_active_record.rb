@@ -1,3 +1,5 @@
+require 'active_record'
+
 class << ActiveRecord::Base.connection
   IGNORED_SQL = [/^PRAGMA/, /^SELECT currval/, /^SELECT CAST/, /^SELECT @@IDENTITY/, /^SELECT @@ROWCOUNT/, /^SHOW FIELDS /]
 

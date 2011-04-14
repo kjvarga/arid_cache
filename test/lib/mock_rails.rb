@@ -1,5 +1,6 @@
 require 'logger'
 require 'fix_active_support_file_store_expires_in'
+require 'active_record'
 
 root_path = File.expand_path(File.join(File.dirname(__FILE__), '../../'))
 RAILS_DEFAULT_LOGGER = ENV["STDOUT"] ? Logger.new(STDOUT) : Logger.new(File.join(root_path, '/test/log/test.log'))

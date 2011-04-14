@@ -1,4 +1,4 @@
-Spec::Matchers.define :include_keys do |*expected|
+RSpec::Matchers.define :include_keys do |*expected|
   
   match do |actual|
     check_all_present(actual, expected) == []
@@ -15,7 +15,7 @@ Spec::Matchers.define :include_keys do |*expected|
    end
 end
 
-Spec::Matchers.define :match_object do |object, *expected_matching_keys|
+RSpec::Matchers.define :match_object do |object, *expected_matching_keys|
 
   match do |actual|
     check_specified_keys_match(actual, object, expected_matching_keys) == []
