@@ -14,6 +14,11 @@ Rails = Class.new do
   def self.logger
     return RAILS_DEFAULT_LOGGER
   end
+  def self.rails3?
+    ActiveRecord::VERSION::STRING.to_i >= 3
+  rescue
+    false
+  end
 end
 
 # Set loggers for all frameworks
