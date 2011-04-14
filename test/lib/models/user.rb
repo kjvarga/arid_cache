@@ -22,7 +22,7 @@ class User < ActiveRecord::Base
     end
   end
 
-  def respond_to?(method)
+  def respond_to?(method, include_private=false)
     if method == :respond_not_overridden
       true
     else
