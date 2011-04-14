@@ -12,7 +12,7 @@ require 'mock_rails'
 require 'blueprint'
 require 'add_query_counting_to_active_record'
 
-WillPaginate.enable_activerecord
+WillPaginate.enable_activerecord if WillPaginate.respond_to?(:enable_activerecord)
 AridCache.init_rails
 Blueprint.seeds
 

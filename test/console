@@ -9,7 +9,7 @@ require 'mock_rails'
 require 'blueprint'
 require 'irb'
 
-WillPaginate.enable_activerecord
+WillPaginate.enable_activerecord if WillPaginate.respond_to?(:enable_activerecord)
 AridCache.init_rails
 Blueprint.seeds
 

@@ -22,7 +22,7 @@ for framework in ([ :active_record, :action_controller, :action_mailer ])
     framework.to_s.camelize.constantize.const_get("Base").logger = Rails.logger
   end
 end
-ActiveSupport::Dependencies.logger = Rails.logger
+ActiveSupport::Dependencies.logger = Rails.logger if defined?(ActiveSupport::Dependencies)
 Rails.cache.logger = Rails.logger
 
 # Include this last otherwise the logger isn't set properly
