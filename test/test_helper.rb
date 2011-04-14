@@ -12,9 +12,17 @@ require 'mock_rails'
 require 'blueprint'
 require 'add_query_counting_to_active_record'
 
-WillPaginate.enable_activerecord if WillPaginate.respond_to?(:enable_activerecord)
+require 'will_paginate/version'
+if WillPaginate::VERSION::MAJOR < 3
+  WillPaginate.enable_activerecord
+else
+  require 'will_paginate/collection'
+  require 'will_paginate/finders/active_record'
+  WillPaginate::Finders::ActiveRecord.enable!
+end
+
 AridCache.init_rails
 Blueprint.seeds
 
-ActiveRecord::Base.logger.info("#{"="*25} RUNNING UNIT TESTS #{"="*25}\n\t\t\t#{Time.now.to_s}\n#{"="*70}")
+ActiveRecord::Base.logger && ActiveRecord::Base.logger.info("#{"="*25} RUNNING UNIT TESTS #{"="*25}\n\t\t\t#{Time.now.to_s}\n#{"="*70}")
 Array.class_eval { alias count size } if RUBY_VERSION < '1.8.7'
