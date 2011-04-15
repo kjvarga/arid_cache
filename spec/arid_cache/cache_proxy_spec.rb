@@ -248,7 +248,7 @@ describe AridCache::CacheProxy do
     end
 
     it "should return records" do
-      @user.cached_get_result.should == @user.companies
+      @user.cached_get_result.should == @user.companies.all
     end
 
     it "should return a count" do
