@@ -32,7 +32,7 @@ describe AridCache do
 
     it "with order option should go to the database to order" do
       lambda {
-        Company.cached_ordered_by_name(:order => 'name DESC')
+        Company.cached_ordered_by_name(:order => 'name DESC').inspect
       }.should query(2)
     end
   end
