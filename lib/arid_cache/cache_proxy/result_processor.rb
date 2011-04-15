@@ -254,6 +254,7 @@ module AridCache
             key = option_map[key] || key
             scope.send(key, pair[1])
           end
+          query = query.scoped.where('id in (?)', ids)
           # Fix http://breakthebit.org/post/3487560245/rails-3-arel-count-size-length-weirdness
           query.class_eval do
             alias_method :size, :length

@@ -18,7 +18,8 @@ gem 'i18n', :require => 'I18n' # required by Faker
 gem 'faker', '=0.9.5'
 
 
-# Required by the ActiveSupport::Cache::FileStore.  Get a "no such file to load -- rack/utils" otherwise.
+# Required by the ActiveSupport::Cache::FileStore.
+# Get a "no such file to load -- rack/utils" otherwise.
 gem 'rack'
 
 gem 'arid_cache', :path => "./"
