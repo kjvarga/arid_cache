@@ -228,12 +228,12 @@ module AridCache
             find_opts.merge!(@options.opts_for_paginate(ids))
             result_klass.paginate(ids, find_opts)
           else
-            result_klass.find_all_by_id(ids, find_opts)
+            find_all_by_id(ids, find_opts)
           end
         else
           # Limits will have already been applied, remove them from the options for find.
           [:offset, :limit].each { |key| find_opts.delete(key) }
-          result = result_klass.find_all_by_id(ids, find_opts)
+          result = find_all_by_id(ids, find_opts)
           records.is_a?(::WillPaginate::Collection) ? records.replace(result) : result
         end
       end
@@ -241,6 +241,22 @@ module AridCache
       # Return the klass to use for building results (only applies to ActiveRecord results)
       def result_klass
         is_cached_result? ? @result.klass : (@cached.is_a?(AridCache::CacheProxy::CachedResult) ? @cached.klass : Utilities.object_class(@options[:receiver]))
+      end
+
+      def find_all_by_id(ids, find_opts)
+        if AridCache.framework.active_record?(3)
+          option_map = {
+            :conditions => :where,
+            :include => :includes
+          }
+          find_opts.inject(result_klass.scoped) do |scope, pair|
+            key, value = pair
+            key = option_map[key] || key
+            scope.send(key, pair[1])
+          end
+        else
+          result_klass.find_all_by_id(ids, find_opts)
+        end
       end
     end
   end

@@ -29,7 +29,7 @@ module AridCache
 
     OPTIONS_FOR_PAGINATE = [:page, :per_page, :total_entries, :finder]
     OPTIONS_FOR_CACHE_PROXY = [:raw, :clear]
-    OPTIONS_FOR_FIND = [ :conditions, :include, :joins, :limit, :offset, :order, :select, :readonly, :group, :having, :from, :lock ]
+    OPTIONS_FOR_FIND = [ :conditions, :where, :include, :includes, :joins, :limit, :offset, :order, :select, :readonly, :group, :having, :from, :lock ]
     OPTIONS_FOR_CACHE = [ :expires_in ]
     OPTIONS_FOR_CACHE_KEY = [ :auto_expire ]
 
