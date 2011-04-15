@@ -42,11 +42,11 @@ module AridCache
       # Return true if the result is an enumerable and the first item is
       # an active record.
       def is_activerecord?
-        is_enumerable? && @result.first.is_a?(::ActiveRecord::Base)
+        AridCache.framework.active_record? && is_enumerable? && @result.first.is_a?(::ActiveRecord::Base)
       end
 
       def is_activerecord_reflection?
-        @result.respond_to?(:proxy_reflection) || @result.respond_to?(:proxy_options)
+        AridCache.framework.active_record? && (@result.respond_to?(:proxy_reflection) || @result.respond_to?(:proxy_options) || (AridCache.framework.active_record?(3) && @result.is_a?(::ActiveRecord::Relation)))
       end
 
       def is_cached_result?
@@ -221,7 +221,7 @@ module AridCache
           end
         end
 
-        ids = records.first.is_a?(ActiveRecord) ? records.collect { |record| record[:id] } : records
+        ids = AridCache.framework.active_record? && records.first.is_a?(ActiveRecord) ? records.collect { |record| record[:id] } : records
         find_opts = @options.opts_for_find(ids)
         if order_in_database?
           if @options.paginate?
