@@ -8,7 +8,7 @@ Bundler.require
 
 require 'mock_rails'
 require 'blueprint'
-AridCache.init_rails
+AridCache.framework.init
 
 require 'will_paginate/version'
 if WillPaginate::VERSION::MAJOR < 3

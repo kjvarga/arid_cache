@@ -3,4 +3,4 @@ begin
 rescue LoadError
   require 'arid_cache' # From gem
 end
-AridCache.init_rails if defined?(Rails)
+AridCache.framework.init

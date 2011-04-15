@@ -7,10 +7,15 @@ require 'arid_cache/active_record'
 require 'arid_cache/cache_proxy'
 require 'arid_cache/railtie' if defined?(Rails)
 require 'arid_cache/inflector'
+require 'arid_cache/framework'
 
 module AridCache
   extend AridCache::Helpers
   Error = Class.new(StandardError) #:nodoc:
+
+  class << self
+    attr_accessor :framework
+  end
 
   # Set to true to make the :raw option return ids after applying options to them.
   # The deprecated behaviour is to return a CachedResult and ignore all options.
@@ -49,11 +54,9 @@ module AridCache
     base.send(:include, AridCache::ActiveRecord)
   end
 
-  # Initializes AridCache for Rails.
-  #
-  # This method is called by `init.rb`,
-  # which is run by Rails on startup.
-  def self.init_rails
-    ::ActiveRecord::Base.send(:include, AridCache::ActiveRecord)
+  def self.version
+    @version ||= File.read(File.join(File.dirname(__FILE__), '..', 'VERSION')).strip
   end
+
+  self.framework = AridCache::Framework.new
 end

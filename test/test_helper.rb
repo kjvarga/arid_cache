@@ -21,7 +21,7 @@ else
   WillPaginate::Finders::ActiveRecord.enable!
 end
 
-AridCache.init_rails
+AridCache.framework.init
 Blueprint.seeds
 
 ActiveRecord::Base.logger && ActiveRecord::Base.logger.info("#{"="*25} RUNNING UNIT TESTS #{"="*25}\n\t\t\t#{Time.now.to_s}\n#{"="*70}")
