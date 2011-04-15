@@ -249,11 +249,17 @@ module AridCache
             :conditions => :where,
             :include => :includes
           }
-          find_opts.inject(result_klass.scoped) do |scope, pair|
+          query = find_opts.inject(result_klass.scoped) do |scope, pair|
             key, value = pair
             key = option_map[key] || key
             scope.send(key, pair[1])
           end
+          # Fix http://breakthebit.org/post/3487560245/rails-3-arel-count-size-length-weirdness
+          query.class_eval do
+            alias_method :size, :length
+            alias_method :count, :length
+          end
+          query
         else
           result_klass.find_all_by_id(ids, find_opts)
         end
