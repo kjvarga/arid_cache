@@ -6,8 +6,9 @@ describe AridCache::CacheProxy::ResultProcessor do
     AridCache::CacheProxy::ResultProcessor.new(value, opts)
   end
 
-  before :all do
+  before :each do
     AridCache.store.delete! # so no options get stored and interfere with other tests
+    AridCache.raw_with_options = true
   end
 
   describe "empty array" do
@@ -364,7 +365,6 @@ describe AridCache::CacheProxy::ResultProcessor do
 
   describe "raw with options handling" do
     before :each do
-      AridCache.raw_with_options = true
       @user = User.make
       @company1 = Company.make
       @company2 = Company.make
@@ -402,6 +402,83 @@ describe AridCache::CacheProxy::ResultProcessor do
       value.total_entries.should == 2
       value.current_page.should == 2
       value.should == [@company2.id]
+    end
+  end
+
+  describe "cached proxy_options result" do
+    before :each do
+      @user = User.make
+      @obj = Array.new([@user])
+      @obj.class_eval do
+        def respond_to?(method)
+          return true if method == :proxy_options
+        end
+      end
+    end
+
+    it "should store a CachedResult" do
+      new_result(@obj).to_cache.should be_a(AridCache::CacheProxy::CachedResult)
+    end
+
+    it "should be a reflection" do
+      new_result(@obj).is_activerecord_reflection?.should be_true
+    end
+
+    it "should set klass" do
+      cache = new_result(@obj).to_cache
+      cache.klass.should be(User)
+    end
+  end
+
+  describe "cached proxy_reflection result" do
+    before :each do
+      @user = User.make
+      @obj = Array.new([@user])
+      stub(@obj).proxy_reflection { stub(Object.new).klass { Company } }
+    end
+
+    it "should be a reflection" do
+      new_result(@obj).is_activerecord_reflection?.should be_true
+    end
+
+    it "should store a CachedResult" do
+      new_result(@obj).to_cache.should be_a(AridCache::CacheProxy::CachedResult)
+    end
+
+    it "should set klass from the proxy_reflection" do
+      cache = new_result(@obj).to_cache
+      cache.klass.should be(Company)
+    end
+  end
+
+  describe "deprecated" do
+    before :each do
+      AridCache.raw_with_options = false
+    end
+
+    describe "cached empty reflection-like result" do
+      before :each do
+        @user = User.make
+        @obj = Array.new([])
+        @obj.class_eval do
+          def respond_to?(method)
+            return true if method == :proxy_options
+          end
+        end
+      end
+
+      it "should store a CachedResult" do
+        new_result(@obj).to_cache.should be_a(AridCache::CacheProxy::CachedResult)
+      end
+
+      it "should be a reflection" do
+        new_result(@obj).is_activerecord_reflection?.should be_true
+      end
+
+      it "should fall back to the receiver class" do
+        cache = new_result(@obj, :receiver => User).to_cache
+        cache.klass.should be(User)
+      end
     end
   end
 end

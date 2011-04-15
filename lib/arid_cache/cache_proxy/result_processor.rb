@@ -66,11 +66,12 @@ module AridCache
             end
             Utilities.object_class(@options[:receiver]).send(@options[:proxy], @result)
           elsif is_activerecord_reflection?
+
             if @options.count_only?
               lazy_cache.count = @result.count
             else
-              lazy_cache.klass = @result.proxy_reflection.klass if @result.respond_to?(:proxy_reflection)
               lazy_cache.ids = @result.collect { |r| r[:id] }
+              lazy_cache.klass = @result.respond_to?(:proxy_reflection) ? @result.proxy_reflection.klass : (is_empty? ? result_klass : @result.first.class)
               lazy_cache.count = @result.size
             end
             lazy_cache
@@ -83,7 +84,7 @@ module AridCache
             lazy_cache.ids = @result
             lazy_cache.count = 0
             lazy_cache.klass = result_klass
-            lazy_cache            
+            lazy_cache
           elsif @result.nil? # so we can distinguish a cached nil vs an empty cache
             lazy_cache.klass = NilClass
             lazy_cache
