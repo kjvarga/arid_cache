@@ -517,9 +517,9 @@ describe AridCache::CacheProxy::ResultProcessor do
       @result.send(:result_klass).should == @obj.class
     end
 
-    it "should be set on the options when to_result is called" do
+    it "should be set on the options when fetch_activerecords is called" do
       @options[:result_klass].should == nil
-      @result.to_result
+      @result.send(:fetch_activerecords, [])
       @options[:result_klass].should be(@obj.class)
     end
   end

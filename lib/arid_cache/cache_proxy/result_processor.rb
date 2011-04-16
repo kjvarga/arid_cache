@@ -96,8 +96,6 @@ module AridCache
       # Apply any options like pagination or ordering and return the result, which
       # is either some base type, or usually, a list of active records.
       def to_result
-        @options[:result_klass] = result_klass
-
         if @options.count_only?
           get_count
 
@@ -215,6 +213,8 @@ module AridCache
       # If an arder is specified then
       # order, limit and paginate in the database.
       def fetch_activerecords(records)
+        @options[:result_klass] = result_klass
+
         if records.empty?
           if @options.paginate?
             return records.paginate(@options.opts_for_paginate(records))
@@ -249,6 +249,7 @@ module AridCache
       end
 
       # Return the klass to use for building results (only applies to ActiveRecord results)
+      # Warning, calling this can trigger Relations/Associations to load.
       def result_klass
         is_cached_result? ? @result.klass : (@cached.is_a?(AridCache::CacheProxy::CachedResult) ? @cached.klass : @options[:receiver_klass])
       end
