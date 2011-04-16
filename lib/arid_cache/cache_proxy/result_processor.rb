@@ -225,8 +225,16 @@ module AridCache
         find_opts = @options.opts_for_find(ids)
         if order_in_database?
           if @options.paginate?
-            find_opts.merge!(@options.opts_for_paginate(ids))
-            result_klass.paginate(ids, find_opts)
+            if AridCache.framework.active_record?(3)
+              page_opts = @options.opts_for_paginate(ids)
+              WillPaginate::Collection.create(page_opts[:page], page_opts[:per_page], page_opts[:total_entries]) do |pager|
+                result = find_all_by_id(ids, find_opts.merge(:limit => pager.per_page, :offset => pager.offset))
+                pager.replace(result)
+              end
+            else
+              find_opts.merge!(@options.opts_for_paginate(ids))
+              result_klass.paginate(ids, find_opts)
+            end
           else
             find_all_by_id(ids, find_opts)
           end
