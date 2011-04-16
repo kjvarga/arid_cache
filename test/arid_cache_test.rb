@@ -299,7 +299,7 @@ class AridCacheTest < ActiveSupport::TestCase
     cached_result.ids.push(24342234, 243234132)
     Rails.cache.write(key, cached_result)
     assert_nothing_raised { @user.cached_companies }
-    assert_equal @user.cached_companies, @user.companies
+    assert_equal @user.cached_companies, @user.companies.all
   end
 
   test "should not raise an error if all cached ids cannot be found while paginating" do
