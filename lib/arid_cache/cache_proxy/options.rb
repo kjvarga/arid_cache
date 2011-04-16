@@ -7,13 +7,18 @@ module AridCache
         self.merge!(opts)
       end
 
-      # Filter options for paginate.  Get the :per_page value from the receiver if it's not set.
+      # Filter options for paginate.
       # Set total_entries to +records.size+ if +records+ is supplied
+      # Get the :per_page value from the +result_klass+, or +receiver_klass+ if its set
+      # and responds to +per_page+.  Otherwise default to 30 results per page.
       def opts_for_paginate(records=nil)
         paginate_opts = reject { |k,v| !OPTIONS_FOR_PAGINATE.include?(k) }
         paginate_opts[:finder] = :find_all_by_id unless paginate_opts.include?(:finder)
-        if self[:result_klass].respond_to?(:per_page) && !paginate_opts.include?(:per_page)
-          paginate_opts[:per_page] = self[:result_klass].per_page
+        unless paginate_opts.key?(:per_page)
+          klass = values_at(:result_klass, :receiver_klass).find do |klass|
+            klass.respond_to?(:per_page)
+          end
+          paginate_opts[:per_page] = klass && klass.per_page || 30
         end
         paginate_opts[:total_entries] = records.size unless records.nil?
         paginate_opts
@@ -75,6 +80,18 @@ module AridCache
 
       def deprecated_raw?
         !!(raw? && !AridCache.raw_with_options)
+      end
+
+      # Returns the class of the receiver object or raises IndexError if the
+      # receiver klass has not been set.
+      def receiver_klass
+        fetch :receiver_klass
+      end
+
+      # Returns the class of the result records or raises IndexError if the
+      # result klass has not been set.
+      def result_klass
+        fetch :result_klass
       end
     end
   end

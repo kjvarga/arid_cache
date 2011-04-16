@@ -64,7 +64,7 @@ module AridCache
             if is_activerecord_reflection?
               @result = @result.collect { |r| r } # force it to load
             end
-            Utilities.object_class(@options[:receiver]).send(@options[:proxy], @result)
+            @options.receiver_klass.send(@options[:proxy], @result)
           elsif is_activerecord_reflection?
 
             if @options.count_only?
@@ -96,6 +96,8 @@ module AridCache
       # Apply any options like pagination or ordering and return the result, which
       # is either some base type, or usually, a list of active records.
       def to_result
+        @options[:result_klass] = result_klass
+
         if @options.count_only?
           get_count
 
@@ -108,7 +110,7 @@ module AridCache
             end
           filtered = filter_results(results)
           if @cached.nil? && !@options.raw?
-            proxy_result = Utilities.object_class(@options[:receiver]).send(@options[:proxy], filtered)
+            proxy_result = @options.receiver_klass.send(@options[:proxy], filtered)
             if filtered.is_a?(WillPaginate::Collection) && proxy_result.is_a?(Enumerable)
               filtered.replace(proxy_result)
             else
@@ -248,7 +250,7 @@ module AridCache
 
       # Return the klass to use for building results (only applies to ActiveRecord results)
       def result_klass
-        is_cached_result? ? @result.klass : (@cached.is_a?(AridCache::CacheProxy::CachedResult) ? @cached.klass : Utilities.object_class(@options[:receiver]))
+        is_cached_result? ? @result.klass : (@cached.is_a?(AridCache::CacheProxy::CachedResult) ? @cached.klass : @options[:receiver_klass])
       end
 
       def find_all_by_id(ids, find_opts)

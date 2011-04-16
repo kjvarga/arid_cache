@@ -69,7 +69,7 @@ module AridCache
       # Combine the options from the blueprint with the options for this call
       opts = opts.symbolize_keys
       @options = Options.new(@blueprint.nil? ? opts : @blueprint.opts.merge(opts))
-      @options[:receiver] = receiver
+      @options[:receiver_klass] = Utilities.object_class(receiver)
       @cache_key = @receiver.arid_cache_key(@method, @options.opts_for_cache_key)
     end
 

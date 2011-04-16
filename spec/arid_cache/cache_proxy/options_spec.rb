@@ -52,29 +52,51 @@ describe AridCache::CacheProxy::Options do
 
   describe "options for paginate" do
     before :each do
-      @result_klass = Class.new do
+      @receiver_klass = Class.new do
         def self.per_page; 23; end
+      end
+      @result_klass = Class.new do
+        def self.per_page; 17; end
       end
     end
 
-    it "should get per_page from the result_klass" do
-      @opts = new_options(:result_klass => @result_klass).opts_for_paginate
-      @opts[:per_page].should == 23
-    end
-
-    it "should use the provided per_page value" do
-      @opts = new_options(:result_klass => @result_klass, :per_page => 3).opts_for_paginate
-      @opts[:per_page].should == 3
-    end
-
-    it "should set total_entries" do
+    it "total_entries should be nil by default" do
       new_options.opts_for_paginate[:total_entries].should be_nil
-      @opts = new_options.opts_for_paginate((1..10).to_a)
-      @opts[:total_entries].should == 10
+    end
+
+    it "should set total_entries to the size of the collection" do
+      new_options.opts_for_paginate((1..10).to_a)[:total_entries].should == 10
     end
 
     it "should use find_all_by_id as the finder" do
       new_options.opts_for_paginate[:finder].should == :find_all_by_id
+    end
+
+    it "per_page should default to 30" do
+      new_options.opts_for_paginate[:per_page].should == 30
+    end
+
+    it "should get per_page from the result class" do
+      new_options(:result_klass => @result_klass).opts_for_paginate[:per_page].should == 17
+    end
+
+    it "should get per_page from the receiver class" do
+      new_options(:receiver_klass => @receiver_klass).opts_for_paginate[:per_page].should == 23
+    end
+
+    it "should get per_page from the result class, then the receiver class" do
+      new_options(
+        :result_klass => @result_klass,
+        :receiver_klass => @receiver_klass
+      ).opts_for_paginate[:per_page].should == 17
+    end
+
+    it "should use per_page if provided" do
+      new_options(
+        :result_klass => @result_klass,
+        :receiver_klass => @receiver_klass,
+        :per_page => 3
+      ).opts_for_paginate[:per_page].should == 3
     end
   end
 
@@ -93,6 +115,12 @@ describe AridCache::CacheProxy::Options do
     it "should not be deprecated" do
       mock(AridCache).raw_with_options { true }
       new_options(:raw => true).deprecated_raw?.should be_false
+    end
+  end
+
+  describe "receiver_klass" do
+    it "should be the class of the receiver" do
+      new_options(:receiver_klass => User)[:receiver_klass].should be(User)
     end
   end
 end

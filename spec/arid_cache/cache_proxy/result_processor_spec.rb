@@ -499,4 +499,28 @@ describe AridCache::CacheProxy::ResultProcessor do
       @result.to_result.should == @user.companies.reverse
     end
   end
+
+  describe "result_klass" do
+    before :each do
+      @obj = Class.new do
+        def self.per_page; 11; end
+      end.new
+      @options = AridCache::CacheProxy::Options.new(:receiver_klass => @obj.class)
+      @result = new_result(@obj, @options)
+    end
+
+    it "the mock class should define per_page" do
+      @obj.class.per_page.should == 11
+    end
+
+    it "should be the class of the receiver object" do
+      @result.send(:result_klass).should == @obj.class
+    end
+
+    it "should be set on the options when to_result is called" do
+      @options[:result_klass].should == nil
+      @result.to_result
+      @options[:result_klass].should be(@obj.class)
+    end
+  end
 end
