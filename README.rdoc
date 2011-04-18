@@ -1,14 +1,17 @@
 = AridCache
 
-AridCache makes caching easy and effective.  AridCache supports caching on all ActiveRecord class and instance methods right out of the box.  AridCache keeps caching logic out of your model methods and clarifies your code by making calls to cached result sets explicit.
+AridCache now supports Rails 3!
+
+AridCache is a caching framework written in Ruby which makes caching easy and effective.  AridCache supports Rails 2 and 3 and provides caching on any ActiveRecord class or instance method right out of the box.  AridCache keeps caching logic in your cache configuration rather than dispersed throughout your code, and makes your code easy to manage by making cached calls explicit.
 
 AridCache supports caching large, expensive ActiveRecord collections by caching only the model IDs, provides efficient in-memory pagination of your cached collections, and gives you collection counts for free.  Non-ActiveRecord collection data is cached unchanged allowing you to cache the results of anything simply by prepending your method call with <tt>cached_</tt>.
 
-AridCache simplifies caching by supporting auto-expiring cache keys - as well as common options like <tt>:expires_in</tt> - and provides methods to help you manage your caches.
+AridCache simplifies caching by supporting auto-expiring cache keys - as well as common options like <tt>:expires_in</tt> - and provides methods to help you manage your caches.  AridCache now supports counts, limits, pagination and in-memory sorting of any cached Enumerable, as well as Proxies, a powerful new feature which gives you total control over your cached data.
 
 == Changes
 
-* v1.3.5: Backwards-compatibility fix for caching an empty array with <tt>:raw => true</tt>
+* v1.4.0: Rails 3 fully supported!
+* v1.3.5: Backwards-compatibility fixes
 * v1.3.4: Inherited cache configurations: Cache options and cache blocks are inherited from superclasses
 * v1.3.2: <tt>AridCache.raw_with_options</tt> configuration for better <tt>:raw</tt> handling on cached ActiveRecord collections
 * v1.3.1: Proxy support which allow you to control how your objects get serialized and unserialized
@@ -41,8 +44,9 @@ Then
 == Features
 
 * Include the AridCache module in any Class
-* <b>Rails 2 & 3 compatible</b> with automatic ActiveRecord::Base integration
-* Auto-generated namespaced cache keys
+* <b>Rails 2 & 3 supported</b> with automatic ActiveRecord::Base integration.
+* When using ActiveRecord 3, returns lazy-loaded result sets.
+* Auto-generated, namespaced cache keys
 * <b>auto-expiring cache keys</b> - your cache expires when the updated_at timestamp changes
 * Supports *limits*, *ordering* & *pagination* of cached Enumerables and ActiveRecord collections
 * Define caches and their options on your class using +instance_caches+ and +class_caches+
@@ -508,8 +512,9 @@ Here +cached_actual_name+ is using its own <tt>:limit => 1</tt> but since no anc
 
 == Compatibility
 
-Tested on Ruby 1.8.6, 1.8.7, REE 1.8.7 and 1.9.1.
-Tested in Rails 2.3.8, 2.3.11, Rails 3.0.0, Rails 3.0.5
+Ruby: 1.8.6, 1.8.7, REE 1.8.7 and 1.9.1.
+Rails: 2.3.8, 2.3.11, 3.0.0, Rails 3.0.5, 3.0.6
+WillPaginate: 2.3.15 (Rails 2), 3.0.pre2 (Rails 3)
 
 For Ruby < 1.8.7 you probably want to include the following to extend the Array class with a <tt>count</tt> method.  Otherwise your <tt>cached_<key>_count</tt> calls probably won't work:
 
@@ -525,6 +530,7 @@ For Ruby < 1.8.7 you probably want to include the following to extend the Array 
 2. <b>You can't cache polymorphic arrays</b> e.g. [#<User id: 1>, #<Pet id: 5>] because it expects all ActiveRecords to be of the same class.  If you need polymorphism consider using a proxy and do the record-loading yourself.
 3. Rails ActiveRecord (or SQL) has a quirk where if you pass an +offset+ without a +limit+ the +offset+ is ignored.  AridCache fixes this unexpected behaviour by including a +limit+ on its queries.
 4. When you use the <tt>:order</tt> option with a cached ActiveRecord collection we have to go to the database to order.  So we also do pagination and limiting there because we want to retrieve as few records as possible.  So we use WillPaginate's ActiveRecord::Base#paginate method.  Unfortunately if you pass <tt>:limit</tt> or <tt>:offset</tt> in addition to your pagination options, the limit and offset are ignored.  This is not the behaviour when interacting with other cached types.  In that case we apply the order, then the limits and finally the pagination, which is what you would expect.
+5. There is a {bug in ActiveRecord 3's AREL}[http://breakthebit.org/post/3487560245/rails-3-arel-count-size-length-weirdness] where calling +count+ or +size+ on an AREL query will cause a </tt>COUNT(*)<tt> to be executed but without applying a +LIMIT+.  Calling +length+ works as expected, and returns the number of records that matched the query.  So we alias +count+ and +size+ to the +length+ on the AREL object that is returned.
 
 == Contributors
 
