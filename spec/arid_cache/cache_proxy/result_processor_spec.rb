@@ -476,7 +476,7 @@ describe AridCache::CacheProxy::ResultProcessor do
       end
 
       it "should fall back to the receiver class" do
-        cache = new_result(@obj, :receiver => User).to_cache
+        cache = new_result(@obj, :receiver_klass => User).to_cache
         cache.klass.should be(User)
       end
     end
