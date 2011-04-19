@@ -42,4 +42,18 @@ describe AridCache do
     AridCache.raw_with_options = true
     AridCache.raw_with_options.should be_true
   end
+  
+  describe "pagination" do
+    before :each do
+      @user = User.make
+      @user.companies << Company.make
+    end                
+    
+    it "should not fail if the page is nil" do
+      lambda {
+        @user.cached_companies(:page => nil) 
+        @user.cached_companies(:page => nil) # works when seeding, so call again to load from cache        
+      }.should_not raise_error(WillPaginate::InvalidPage)
+    end
+  end
 end

@@ -24,10 +24,13 @@ describe AridCache::CacheProxy::Options do
     new_options(:force => true).force?.should be_true
   end
 
-  it "paginate?" do
-    new_options(:page => 1).paginate?.should be_true
-    new_options(:per_page => 1).paginate?.should be_false
-    new_options(:page => 1, :per_page => 1).paginate?.should be_true
+  describe "paginate?" do
+    it "should be true if the :page option is present" do
+      new_options(:page => 1).paginate?.should be_true
+      new_options(:page => nil).paginate?.should be_true
+      new_options(:per_page => 1).paginate?.should be_false
+      new_options(:page => 1, :per_page => 1).paginate?.should be_true
+    end
   end
 
   it "raw?" do
@@ -97,6 +100,12 @@ describe AridCache::CacheProxy::Options do
         :receiver_klass => @receiver_klass,
         :per_page => 3
       ).opts_for_paginate[:per_page].should == 3
+    end
+
+    it "page should default to 1 if it is nil" do
+      new_options(
+        :page => nil
+      ).opts_for_paginate[:page].should == 1
     end
   end
 

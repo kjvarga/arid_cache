@@ -20,6 +20,7 @@ module AridCache
           end
           paginate_opts[:per_page] = klass && klass.per_page || 30
         end
+        paginate_opts[:page] = 1 if paginate_opts[:page].nil?
         paginate_opts[:total_entries] = records.size unless records.nil?
         paginate_opts
       end
