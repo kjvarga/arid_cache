@@ -75,8 +75,13 @@ module AridCache
         include?(:order) && (self[:order].is_a?(Symbol) || self[:order].is_a?(String))
       end
 
-      def proxy?
-        include?(:proxy)
+      # Return true if the user has defined a proxy for results processing in the given
+      # direction.
+      #
+      # * +direction+ - :in or :out, depending on whether we are putting results into
+      #                 the cache, or returning results from the cache, respectively
+      def proxy?(direction)
+        include?(:proxy) || include?("proxy_#{direction}".to_sym)
       end
 
       def deprecated_raw?
@@ -93,6 +98,15 @@ module AridCache
       # result klass has not been set.
       def result_klass
         fetch :result_klass
+      end
+
+      # Return the user's proxy method for the given direction.  Returns a symbol, Proc
+      # or nil if no proxy is defined.
+      #
+      # * +direction+ - :in or :out, depending on whether we are putting results into
+      #                 the cache, or returning results from the cache, respectively
+      def proxy(direction)
+        self[:proxy] || self["proxy_#{direction}".to_sym]
       end
     end
   end

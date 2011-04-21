@@ -109,9 +109,29 @@ describe AridCache::CacheProxy::Options do
     end
   end
 
-  describe "proxies" do
+  describe "proxy?" do
     it "should use proxy" do
-      new_options(:proxy => :serializing_proxy).proxy?.should be_true
+      new_options(:proxy => :xyz).proxy?(:in).should be_true
+      new_options(:proxy => :xyz).proxy?(:out).should be_true
+    end
+
+    it "should proxy in" do
+      new_options(:proxy_in => :xyz).proxy?(:in).should be_true
+      new_options(:proxy_in => :xyz).proxy?(:out).should be_false
+    end
+
+    it "should proxy out" do
+      new_options(:proxy_out => :xyz).proxy?(:in).should be_false
+      new_options(:proxy_out => :xyz).proxy?(:out).should be_true
+    end
+  end
+
+  describe "proxy" do
+    it "should return the proxy" do
+      new_options(:proxy_in => :xyz).proxy(:in).should == :xyz
+      new_options(:proxy_out => :xyz).proxy(:out).should == :xyz
+      new_options(:proxy => :xyz).proxy(:in).should == :xyz
+      new_options(:proxy => :xyz).proxy(:out).should == :xyz
     end
   end
 

@@ -60,11 +60,11 @@ module AridCache
         # a named scope.  Calling respond_to? on an association proxy will trigger a select
         # because it loads up the target and passes the respond_to? on to it.
         @cached =
-          if @options.proxy?
+          if @options.proxy?(:in)
             if is_activerecord_reflection?
               @result = @result.collect { |r| r } # force it to load
             end
-            @options.receiver_klass.send(@options[:proxy], @result)
+            run_user_proxy(:in, @result)
           elsif is_activerecord_reflection?
 
             if @options.count_only?
@@ -99,7 +99,7 @@ module AridCache
         if @options.count_only?
           get_count
 
-        elsif @options.proxy?
+        elsif @options.proxy?(:out)
           results =
             if @cached.nil? || !@options.raw?
               @result
@@ -107,8 +107,10 @@ module AridCache
               @cached
             end
           filtered = filter_results(results)
-          if @cached.nil? && !@options.raw?
-            proxy_result = @options.receiver_klass.send(@options[:proxy], filtered)
+          # If proxying out, we always have to proxy the result.
+          # If proxying both ways, we don't need to proxy the result after seeding the cache.
+          if !@options.raw? && (@options[:proxy_out] || @cached.nil?)
+            proxy_result = run_user_proxy(:out, filtered)
             if filtered.is_a?(WillPaginate::Collection) && proxy_result.is_a?(Enumerable)
               filtered.replace(proxy_result)
             else
@@ -117,6 +119,11 @@ module AridCache
           else
             filtered
           end
+
+        # If proxying in, we want to return what was stored in the cache, not what was
+        # returned by the block.  So with :proxy_in, using :raw => true has no effect.
+        elsif @options.proxy?(:in)
+          filter_results(@cached || @result)
 
         elsif (@cached || @result).is_a?(AridCache::CacheProxy::CachedResult) && (@cached || @result).klass == NilClass
           nil
@@ -144,6 +151,24 @@ module AridCache
       end
 
       private
+
+      # Run the user's proxy method (or Proc) and return the result.
+      #
+      # == Arguments
+      # * +direction+ - :in or :out, depending on whether we are putting results into
+      #             the cache, or returning results from the cache, respectively
+      # * +records+ - some kind of result that is passed to the proxy method
+      def run_user_proxy(direction, records)
+        proxy = @options.proxy(direction)
+        case proxy
+        when Symbol, String
+          @options.receiver_klass.send(proxy, records)
+        when Proc
+          proxy.call(records)
+        else
+          records # silently ignore it
+        end
+      end
 
       def get_count
         if @cached.is_a?(AridCache::CacheProxy::CachedResult) # use what we put in the cache

@@ -8,6 +8,7 @@ describe AridCache::CacheProxy::ResultProcessor do
 
   before :each do
     AridCache.store.delete! # so no options get stored and interfere with other tests
+    Rails.cache.clear
     AridCache.raw_with_options = true
   end
 
@@ -227,10 +228,21 @@ describe AridCache::CacheProxy::ResultProcessor do
     before :each do
       class User
         instance_caches do
-          companies(:proxy => :abc)
+          companies(:proxy => :hash_proxy)
+          companies_in(:proxy_in => :id_proxy) {   # store ids, return ids
+            companies
+          }
+          companies_out(:proxy_out => :id_proxy) { # store ids, return records
+            companies.all.map(&:id)
+          }
         end
 
-        def self.abc(records)
+        def self.id_proxy(records)
+          return records if records.empty?
+          records.first.is_a?(ActiveRecord::Base) ? records.collect(&:id) : AridCache.find_all_by_id(Company, records)
+        end
+
+        def self.hash_proxy(records)
           return records if records.empty?
           records.first.is_a?(ActiveRecord::Base) ? records.collect(&:attributes) : records.collect { |r| Company.find_by_id(r['id']) }
         end
@@ -243,19 +255,26 @@ describe AridCache::CacheProxy::ResultProcessor do
     end
 
     it "the proxy called on itself should return the original value" do
-      User.abc(User.abc([@company])).should == [@company]
+      User.hash_proxy(User.hash_proxy([@company])).should == [@company]
+    end
+
+    it "the proxy called on itself should return the original value" do
+      User.id_proxy(User.id_proxy([@company])).should == [@company]
     end
 
     it "should serialize" do
+      mock.proxy(User).hash_proxy(anything)
       @user.cached_companies.should == [@company]
     end
 
     it "should un-serialize" do
-      @user.cached_companies # seed the cache
+      mock.proxy(User).hash_proxy(anything).twice
+      @user.cached_companies.should == [@company] # seed the cache
       @user.cached_companies.should == [@company]
     end
 
     it "should return json with :raw => true" do
+      mock.proxy(User).hash_proxy(anything)
       # Seed the cache; it should use the serialized result in the return value.
       value = @user.cached_companies(:raw => true)
 
@@ -268,12 +287,62 @@ describe AridCache::CacheProxy::ResultProcessor do
       end
 
       # Cache is seeded, it should use the cached result
-      dont_allow(User).abc
+      dont_allow(User).hash_proxy
       value = @user.cached_companies(:raw => true)
       value.should be_a(Array)
       value.first.should be_a(Hash)
       value.first.each_pair do |k, v|
         v.to_s.should == @company.attributes[k].to_s
+      end
+    end
+
+    it "should proxy out only" do
+      mock.proxy(User).id_proxy(anything)
+      @user.cached_companies_out.should == @user.companies.to_a
+      @user.cached_companies_out(:raw => true).should == @user.companies.map(&:id)
+    end
+
+    it "should proxy in only" do
+      mock.proxy(User).id_proxy(anything)
+      @user.cached_companies_in.should == @user.companies.map(&:id)
+      @user.cached_companies_in(:raw => true).should == @user.companies.map(&:id)
+    end
+
+    describe "as a Proc" do
+      before :each do
+        @ids = [1,2,3]
+        @proc = Proc.new { |records| records.reverse }
+      end
+
+      it "the proc should reverse the list" do
+        #mock.proxy(@proxy).call(@ids)
+        @proc.call(@ids).should == @ids.reverse
+      end
+
+      it "should be called going in" do
+        #mock.proxy(@proxy).call(@ids)
+        new_result(nil, :proxy_in => @proc).send(:run_user_proxy, :in, @ids).should == @ids.reverse
+      end
+
+      it "should not be called going out" do
+        #mock.proxy(@proxy).call(@ids).never
+        new_result(nil, :proxy_in => @proc).send(:run_user_proxy, :out, @ids).should == @ids
+      end
+
+      it "should be called going out" do
+        #mock.proxy(@proxy).call(@ids)
+        new_result(nil, :proxy_out => @proc).send(:run_user_proxy, :out, @ids).should == @ids.reverse
+      end
+
+      it "should not be called going in" do
+        #mock.proxy(@proxy).call(@ids).never
+        new_result(nil, :proxy_out => @proc).send(:run_user_proxy, :in, @ids).should == @ids
+      end
+
+      it "should be called both ways" do
+        #mock.proxy(@proxy).call(anything).twice
+        new_result(nil, :proxy => @proc).send(:run_user_proxy, :in, @ids).should == @ids.reverse
+        new_result(nil, :proxy => @proc).send(:run_user_proxy, :out, @ids).should == @ids.reverse
       end
     end
 
@@ -292,7 +361,7 @@ describe AridCache::CacheProxy::ResultProcessor do
 
       it "should apply limit and offset with :raw => true" do
         @companies = @user.cached_companies
-        @user.cached_companies(:limit => 2, :offset => 1, :raw => true).should == User.abc(@companies[1,2])
+        @user.cached_companies(:limit => 2, :offset => 1, :raw => true).should == User.hash_proxy(@companies[1,2])
       end
 
       it "should apply pagination" do
@@ -312,7 +381,7 @@ describe AridCache::CacheProxy::ResultProcessor do
       end
 
       it "should paginate with :raw => true" do
-        @companies = User.abc(@user.cached_companies)
+        @companies = User.hash_proxy(@user.cached_companies)
         value = @user.cached_companies(:page => 2, :per_page => 2, :raw => true)
         value.should be_a(WillPaginate::Collection)
         value.first.should be_a(Hash)
