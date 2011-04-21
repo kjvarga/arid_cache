@@ -8,11 +8,12 @@ require 'arid_cache/cache_proxy'
 require 'arid_cache/railtie' if defined?(Rails)
 require 'arid_cache/inflector'
 require 'arid_cache/framework'
+require 'arid_cache/proxies'
 
 module AridCache
   extend AridCache::Helpers
   extend AridCache::CacheProxy::Utilities
-  
+
   Error = Class.new(StandardError) #:nodoc:
 
   class << self
