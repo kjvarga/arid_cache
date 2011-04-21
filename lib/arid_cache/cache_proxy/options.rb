@@ -33,7 +33,7 @@ module AridCache
       # @arg ids array of ids to order by unless an :order option is specified.
       def opts_for_find(ids)
         find_opts = reject { |k,v| !OPTIONS_FOR_FIND.include?(k) }
-        find_opts[:order] = AridCache::CacheProxy::Utilities.order_by(ids, self[:result_klass]) unless find_opts.include?(:order)
+        find_opts[:order] = AridCache.order_by(ids, self[:result_klass]) unless find_opts.include?(:order)
         find_opts[:limit] = ids.size unless find_opts.include?(:limit)
         find_opts
       end

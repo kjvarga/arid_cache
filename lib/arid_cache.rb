@@ -11,6 +11,8 @@ require 'arid_cache/framework'
 
 module AridCache
   extend AridCache::Helpers
+  extend AridCache::CacheProxy::Utilities
+  
   Error = Class.new(StandardError) #:nodoc:
 
   class << self

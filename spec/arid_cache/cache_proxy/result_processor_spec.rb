@@ -482,24 +482,6 @@ describe AridCache::CacheProxy::ResultProcessor do
     end
   end
 
-  describe "find_all_by_id" do
-    before :each do
-      @user = User.make
-      @user.companies << Company.make
-      @user.companies << Company.make
-      Company.make # there must be more than 2 companies for it to fail
-      @cached = AridCache::CacheProxy::CachedResult.new
-      @cached.ids = @user.companies.reverse.map(&:id)
-      @cached.klass = Company
-      @result = new_result(@cached)
-      mock.proxy(@result).find_all_by_id(@cached.ids, anything)
-    end
-
-    it "should maintain order" do
-      @result.to_result.should == @user.companies.reverse
-    end
-  end
-
   describe "result_klass" do
     before :each do
       @obj = Class.new do

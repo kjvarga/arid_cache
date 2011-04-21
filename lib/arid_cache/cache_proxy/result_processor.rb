@@ -230,7 +230,7 @@ module AridCache
             if AridCache.framework.active_record?(3)
               page_opts = @options.opts_for_paginate(ids)
               WillPaginate::Collection.create(page_opts[:page], page_opts[:per_page], page_opts[:total_entries]) do |pager|
-                result = find_all_by_id(ids, find_opts.merge(:limit => pager.per_page, :offset => pager.offset))
+                result = AridCache.find_all_by_id(result_klass, ids, find_opts.merge(:limit => pager.per_page, :offset => pager.offset))
                 pager.replace(result)
               end
             else
@@ -238,12 +238,12 @@ module AridCache
               result_klass.paginate(ids, find_opts)
             end
           else
-            find_all_by_id(ids, find_opts)
+            AridCache.find_all_by_id(result_klass, ids, find_opts)
           end
         else
           # Limits will have already been applied, remove them from the options for find.
           [:offset, :limit].each { |key| find_opts.delete(key) }
-          result = find_all_by_id(ids, find_opts)
+          result = AridCache.find_all_by_id(result_klass, ids, find_opts)
           records.is_a?(::WillPaginate::Collection) ? records.replace(result) : result
         end
       end
@@ -254,28 +254,7 @@ module AridCache
         is_cached_result? ? @result.klass : (@cached.is_a?(AridCache::CacheProxy::CachedResult) ? @cached.klass : @options[:receiver_klass])
       end
 
-      def find_all_by_id(ids, find_opts)
-        if AridCache.framework.active_record?(3)
-          option_map = {
-            :conditions => :where,
-            :include => :includes
-          }
-          query = find_opts.inject(result_klass.scoped) do |scope, pair|
-            key, value = pair
-            key = option_map[key] || key
-            scope.send(key, pair[1])
-          end
-          query = query.scoped.where(Utilities.namespaced_column(:id, result_klass) + ' in (?)', ids)
-          # Fix http://breakthebit.org/post/3487560245/rails-3-arel-count-size-length-weirdness
-          query.class_eval do
-            alias_method :size, :length
-            alias_method :count, :length
-          end
-          query
-        else
-          result_klass.find_all_by_id(ids, find_opts)
-        end
-      end
+
     end
   end
 end
