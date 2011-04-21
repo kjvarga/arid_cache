@@ -10,6 +10,7 @@ AridCache simplifies caching by supporting auto-expiring cache keys - as well as
 
 == Changes
 
+* v1.4.1: Add <tt>:proxy_out</tt> and <tt>:proxy_in</tt> options; <tt>AridCache::Proxies::IdProxy</tt>; Support +Proc+ proxies.
 * v1.4.0: Rails 3 fully supported!
 * v1.3.5: Backwards-compatibility fixes
 * v1.3.4: Inherited cache configurations: Cache options and cache blocks are inherited from superclasses
