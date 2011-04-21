@@ -6,8 +6,11 @@ module AridCache
       # All the records must be of class +klass+
       def self.for(klass, find_opts={})
         return Proc.new do |records|
-          return records if records.empty?
-          records.first.is_a?(::ActiveRecord::Base) ? records.collect(&:id) : AridCache.find_all_by_id(klass, records, find_opts)
+          if records.empty?
+            records
+          else
+            records.first.is_a?(::ActiveRecord::Base) ? records.collect(&:id) : AridCache.find_all_by_id(klass, records, find_opts)
+          end
         end
       end
     end
