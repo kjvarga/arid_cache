@@ -7,8 +7,6 @@ describe AridCache::CacheProxy::ResultProcessor do
   end
 
   before :each do
-    AridCache.store.delete! # so no options get stored and interfere with other tests
-    Rails.cache.clear
     AridCache.raw_with_options = true
   end
 

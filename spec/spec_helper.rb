@@ -32,6 +32,8 @@ RSpec.configure do |config|
   end
 
   config.before(:each) do
+    AridCache.store.delete! # so no options get stored and interfere with other tests
+    Rails.cache.respond_to?(:clear) ? Rails.cache.clear : Rails.cache.delete_matched(/.*/)
     Sham.reset(:before_each)
     full_example_description = "#{self.class.description} #{@method_name}"
     RAILS_DEFAULT_LOGGER.info("\n\n#{full_example_description}\n#{'-' * (full_example_description.length)}")
