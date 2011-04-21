@@ -39,7 +39,9 @@ module AridCache
       # Find and return records of the given +klass+ which have id in +ids+.
       # +find_opts+ is a hash of options which are passed to find.
       # If no order option is given, the ordering of the ids is preserved.
+      # No query is performed if +ids+ is empty.
       def find_all_by_id(klass, ids, find_opts={})
+        return ids if ids.empty?
         find_opts = Options.new(find_opts.merge(:result_klass => klass)).opts_for_find(ids)
         if AridCache.framework.active_record?(3)
           option_map = {

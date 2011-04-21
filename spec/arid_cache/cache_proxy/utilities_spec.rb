@@ -34,5 +34,11 @@ describe AridCache::CacheProxy::Utilities do
       @result.size.should == 1
       @result.first.should == @user.companies.reverse[1]
     end
+    
+    it "should not fail when ids is empty" do
+      lambda {
+        AridCache::CacheProxy::Utilities.find_all_by_id(Company, []).inspect  
+      }.should query(0)
+    end
   end
 end
