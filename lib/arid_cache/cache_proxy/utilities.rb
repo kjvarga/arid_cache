@@ -64,6 +64,20 @@ module AridCache
           klass.find_all_by_id(ids, find_opts)
         end
       end
+
+      # Infer the class of the objects in a collection.  The collection could be empty.
+      # If the collection is a relation or proxy reflection we can get the class from it.
+      #
+      # Return the class or nil if no class can be inferred.
+      def collection_klass(collection)
+        if collection.respond_to?(:proxy_reflection)
+          collection.proxy_reflection.klass
+        elsif defined?(::ActiveRecord::Relation) && collection.is_a?(::ActiveRecord::Relation)
+          collection.klass
+        elsif collection.respond_to?(:first) && collection.first
+          collection.first.class
+        end
+      end
     end
   end
 end

@@ -12,6 +12,7 @@ module AridCache
     # into that class.  We have to keep whatever is cached as small as possible tho,
     # so it's probably best to cache a Hash and load it with CachedResult.
     class ResultProcessor
+      attr_reader :options
 
       def initialize(result, opts={})
         @result = result
@@ -65,13 +66,12 @@ module AridCache
               @result = @result.collect { |r| r } # force it to load
             end
             run_user_proxy(:in, @result)
-          elsif is_activerecord_reflection?
-
+          elsif is_activerecord_reflection? # Don't trigger it unless we really have to
             if @options.count_only?
               lazy_cache.count = @result.count
             else
               lazy_cache.ids = @result.collect { |r| r[:id] }
-              lazy_cache.klass = @result.respond_to?(:proxy_reflection) ? @result.proxy_reflection.klass : (is_empty? ? result_klass : @result.first.class)
+              lazy_cache.klass = Utilities.collection_klass(@result) || result_klass
               lazy_cache.count = @result.size
             end
             lazy_cache
@@ -95,7 +95,7 @@ module AridCache
 
       # Apply any options like pagination or ordering and return the result, which
       # is either some base type, or usually, a list of active records.
-      def to_result
+      def to_result  
         if @options.count_only?
           get_count
 
@@ -125,7 +125,7 @@ module AridCache
         elsif @options.proxy?(:in)
           filter_results(@cached || @result)
 
-        elsif (@cached || @result).is_a?(AridCache::CacheProxy::CachedResult) && (@cached || @result).klass == NilClass
+        elsif (@cached || @result).is_a?(AridCache::CacheProxy::CachedResult) && (@cached || @result).klass == NilClass && !(@cached || @result).has_ids?
           nil
 
         elsif @options.raw?
@@ -278,8 +278,6 @@ module AridCache
       def result_klass
         is_cached_result? ? @result.klass : (@cached.is_a?(AridCache::CacheProxy::CachedResult) ? @cached.klass : @options[:receiver_klass])
       end
-
-
     end
   end
 end

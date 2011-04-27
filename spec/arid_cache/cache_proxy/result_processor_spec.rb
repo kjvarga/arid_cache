@@ -6,6 +6,16 @@ describe AridCache::CacheProxy::ResultProcessor do
     AridCache::CacheProxy::ResultProcessor.new(value, opts)
   end
 
+  # Yield the block once with raw_with_options off, and once with raw_with_options on.
+  # The block should make RSpec assertions.
+  def with_deprecated_support
+    current = AridCache.raw_with_options
+    yield
+    AridCache.raw_with_options = !!current
+    yield
+    AridCache.raw_with_options = current
+  end
+
   before :each do
     AridCache.raw_with_options = true
   end
@@ -491,9 +501,9 @@ describe AridCache::CacheProxy::ResultProcessor do
       new_result(@obj).is_activerecord_reflection?.should be_true
     end
 
-    it "should set klass" do
+    it "should not be able to infer the result klass" do
       cache = new_result(@obj).to_cache
-      cache.klass.should be(User)
+      cache.klass.should be(NilClass)
     end
   end
 
@@ -538,6 +548,19 @@ describe AridCache::CacheProxy::ResultProcessor do
         new_result(@obj).to_cache.should be_a(AridCache::CacheProxy::CachedResult)
       end
 
+      it "should not be able to infer the class of the results (without knowing the receiver class)" do
+        result = new_result(@ob)
+        result.options[:receiver_klass].should be_nil
+        cached = result.to_cache
+        cached.klass.should be(NilClass)
+      end
+
+      it "should return an empty array" do
+        result = new_result(@obj).to_result
+        result.should be_a(Array)
+        result.should be_empty
+      end
+
       it "should be a reflection" do
         new_result(@obj).is_activerecord_reflection?.should be_true
       end
@@ -570,6 +593,34 @@ describe AridCache::CacheProxy::ResultProcessor do
       @options[:result_klass].should == nil
       @result.send(:fetch_activerecords, [])
       @options[:result_klass].should be(@obj.class)
+    end
+  end
+
+  describe "cached result with NilClass" do
+    before :each do
+      @cached = AridCache::CacheProxy::CachedResult.new
+      @cached.klass = nil
+    end
+
+    it "should have NilClass" do
+      @cached.klass.should be(NilClass)
+    end
+
+    it "should return nil if no ids" do
+      with_deprecated_support {
+        @cached.has_ids?.should be_false
+        new_result(@cached).to_result.should be_nil
+      }
+    end
+
+    it "should return empty array" do
+      with_deprecated_support {
+        @cached.ids = []
+        @cached.has_ids?.should be_true
+        result = new_result(@cached).to_result
+        result.should be_a(Array)
+        result.should be_empty
+      }
     end
   end
 end
