@@ -95,7 +95,7 @@ module AridCache
 
       # Apply any options like pagination or ordering and return the result, which
       # is either some base type, or usually, a list of active records.
-      def to_result  
+      def to_result
         if @options.count_only?
           get_count
 

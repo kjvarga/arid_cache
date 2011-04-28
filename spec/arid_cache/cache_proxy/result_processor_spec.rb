@@ -34,8 +34,64 @@ describe AridCache::CacheProxy::ResultProcessor do
       @result.order_in_database?.should be_false
     end
 
-    it "should be cached as an array" do
-      @result.to_cache.should be_a(Array)
+    it "should return an empty array from the cache" do
+      with_deprecated_support {
+        result = new_result(@result.to_cache).to_result
+        result.should be_a(Array)
+        result.should be_empty
+      }
+    end
+
+    describe "with deprecated raw handling" do
+      before :each do
+        AridCache.raw_with_options = false
+      end
+
+      it "should be cached as a CachedResult" do
+        @result.to_cache.should be_a(AridCache::CacheProxy::CachedResult)
+      end
+
+      it "with :raw => true should return a CachedResult" do
+        new_result(@result.to_cache, :raw => true).to_result.should be_a(AridCache::CacheProxy::CachedResult)
+      end
+    end
+
+    describe "with new raw handling" do
+      before :each do
+        AridCache.raw_with_options = true
+      end
+
+      it "should be cached as an Array" do
+        @result.to_cache.should be_a(Array)
+      end
+
+      it "with :raw => true should return an Array" do
+        new_result(@result.to_cache, :raw => true).to_result.should be_a(Array)
+      end
+    end
+
+    describe "when proxied" do
+      before :each do
+        @user = User.make
+      end
+
+      it "in should store result unmodified" do
+        @proxy = Proc.new { |ids| ids.should be_a(Array); ids }
+        with_deprecated_support {
+          @user.cached_empty_array_in(:proxy_in => @proxy, :force => true) { [] }.should be_a(Array)
+          @user.cached_empty_array_in.should be_a(Array)
+          @user.cached_empty_array_in(:raw => true).should be_a(Array)
+        }
+      end
+
+      it "out should pass the ids not a CachedResult" do
+        @proxy = Proc.new { |ids| ids.should be_a(Array); ids }
+        with_deprecated_support {
+          @user.cached_empty_array_out(:proxy_out => @proxy, :force => true) { [] }.should be_a(Array)
+          @user.cached_empty_array_out.should be_a(Array)
+          @user.cached_empty_array_out(:raw => true).should be_a(Array)
+        }
+      end
     end
   end
 
