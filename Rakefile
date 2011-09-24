@@ -58,8 +58,8 @@ namespace :release do
 
   desc "Release the current version (after a manual version bump).  This rebuilds the gemspec, pushes the updated code, tags it and releases to RubyGems"
   task :current do
-    Rake::Task['github:release'].invoke
+    # Rake::Task['github:release'].invoke
     Rake::Task['git:release'].invoke
-    Rake::Task['gemcutter:release'].invoke
+    # Rake::Task['gemcutter:release'].invoke
   end
 end
