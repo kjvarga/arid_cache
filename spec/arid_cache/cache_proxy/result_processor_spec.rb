@@ -233,6 +233,19 @@ describe AridCache::CacheProxy::ResultProcessor do
       new_result(@value, :offset => @offset, :limit => @limit).to_result.size.should == @limit
     end
 
+    it "should return an empty array if the offset is greater than the size" do
+      @offset = 100
+      @limit = 3
+      new_result(@value, :offset => @offset, :limit => @limit).to_result.should == []
+      new_result(@value, :offset => @offset, :limit => @limit).to_result.size.should == 0
+    end
+
+    it "should raise an ArgumentError if you try to apply limit or offset on a Hash" do
+      lambda { new_result({}, :offset => 100).to_result }.should raise_error(ArgumentError, "Cannot apply limit or offset to Hash #{{}.inspect}")
+      lambda { new_result({}, :limit  => 3).to_result   }.should raise_error(ArgumentError, "Cannot apply limit or offset to Hash #{{}.inspect}")
+      lambda { new_result({}, :offset => 100, :limit => 3).to_result }.should raise_error(ArgumentError, "Cannot apply limit or offset to Hash #{{}.inspect}")
+    end
+
     describe "order by" do
       before :each do
         @low = [1, 2, 3, 4]

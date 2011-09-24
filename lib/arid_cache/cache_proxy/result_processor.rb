@@ -217,7 +217,12 @@ module AridCache
 
         # Limit / Offset
         if (@options.include?(:offset) || @options.include?(:limit)) && records.respond_to?(:[])
-          records = records[@options[:offset] || 0, @options[:limit] || records.size]
+          begin
+            records = records[@options[:offset] || 0, @options[:limit] || records.size]
+          rescue ArgumentError
+            raise ArgumentError.new("Cannot apply limit or offset to #{records.class} #{records.inspect}")
+          end
+          records = [] if records.nil? # out-of-range offset returns nil
         end
 
         # Paginate
