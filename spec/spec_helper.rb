@@ -14,9 +14,8 @@ require 'will_paginate/version'
 if WillPaginate::VERSION::MAJOR < 3
   WillPaginate.enable_activerecord
 else
-  require 'will_paginate/collection'
-  require 'will_paginate/finders/active_record'
-  WillPaginate::Finders::ActiveRecord.enable!
+  require 'will_paginate/array'
+  require 'will_paginate/active_record'
 end
 
 # Requires supporting ruby files with custom matchers and macros, etc,
