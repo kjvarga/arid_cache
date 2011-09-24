@@ -4,7 +4,7 @@ root_path = File.expand_path(File.join(File.dirname(__FILE__), '..'))
 $LOAD_PATH.unshift(File.join(root_path, '/test/lib')) # add test/lib to the load path
 
 require 'bundler/setup'
-Bundler.require
+Bundler.require(:default, :test)
 
 require 'mock_rails'
 require 'blueprint'

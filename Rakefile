@@ -1,7 +1,7 @@
 require 'rubygems'
 require 'thread'
 require 'bundler/setup'
-Bundler.require
+Bundler.require(:default, :development)
 
 begin
   require 'jeweler'
@@ -16,10 +16,7 @@ begin
     gem.email = "kjvarga@gmail.com"
     gem.homepage = "http://github.com/kjvarga/arid_cache"
     gem.authors = ["Karl Varga"]
-    gem.add_dependency "will_paginate"
-    gem.add_development_dependency "will_paginate"
-    gem.add_development_dependency "faker"
-    gem.add_development_dependency "machinist"
+    gem.test_files = Dir['spec/**/*'] + Dir['test/**/*'] - Dir['test/log/**/*'] - Dir['test/log*']
     # gem is a Gem::Specification... see http://www.rubygems.org/read/chapter/20 for additional settings
   end
   Jeweler::GemcutterTasks.new

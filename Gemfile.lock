@@ -1,8 +1,8 @@
 PATH
   remote: ./
   specs:
-    arid_cache (1.4.4)
-      will_paginate
+    arid_cache (1.4.5)
+      will_paginate (~> 3.0.1)
 
 GEM
   remote: http://rubygems.org/

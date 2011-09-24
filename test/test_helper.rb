@@ -4,7 +4,7 @@ require 'fileutils'
 require 'rubygems'
 require 'thread'
 require 'bundler/setup'
-Bundler.require
+Bundler.require(:default, :test)
 require 'test/unit' # required by ActiveSupport::TestCase
 require 'active_support/test_case'
 
