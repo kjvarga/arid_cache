@@ -1,7 +1,7 @@
 # A sample Gemfile
 source "http://rubygems.org"
 
-gem "will_paginate", "~> 3.0.1"
+gem "will_paginate", ">=3.0.1"
 group :test, :development do
   gem 'activerecord', '~>3.0.10', :require => 'active_record'
   gem 'activesupport', '~>3.0.10', :require => 'active_support'
