@@ -10,6 +10,7 @@ AridCache simplifies caching by supporting auto-expiring cache keys - as well as
 
 == Changes
 
+* v1.4.6: Tested with will_paginate prerelase and official 3.0 releases
 * v1.4.5: Return empty array if offset is greater than the array size.  Raise exception if you try to apply limit or offset to a Hash.
 * v1.4.4: Fix empty relations return nil instead of an empty array
 * v1.4.2: Add <tt>:proxy_out</tt> and <tt>:proxy_in</tt> options; <tt>AridCache::Proxies::IdProxy</tt>.  Support proxies as +Procs+.
