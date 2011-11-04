@@ -25,22 +25,44 @@ module AridCache
       # Supported options:
       #   :auto_expire => true/false   # (default false) whether or not to use the <tt>cache_key</tt> method on instance caches
       #
-      # Examples:
-      #   User.arid_cache_key('companies')       => 'user-companies'
-      #   User.first.arid_cache_key('companies') => 'users/1-companies'
-      #   User.first.arid_cache_key('companies', :auto_expire => true) => 'users/20090120091123-companies'
+      # == Example
+      #   User.arid_cache_key('companies')       => 'arid-cache-user-companies'
+      #   User.first.arid_cache_key('companies') => 'arid-cache-users/1-companies'
+      #   User.first.arid_cache_key('companies', :auto_expire => true) => 'arid-cache-users/1-20090120091123-companies'
       #
-      def arid_cache_key(key, options={})
-        object_key = if self.is_a?(Class)
-          self.name.downcase
-        elsif options[:auto_expire]
-          self.cache_key
-        else
-          result = "#{AridCache::Inflector.pluralize(self.class.name.downcase)}"
-          result += "/#{self[:id]}" if self.respond_to?(:[]) && !self[:id].nil?
-          result
-        end
-        'arid-cache-' + object_key + '-' + key.to_s
+      # If called on a class with two arguments, the first being a record id and the
+      # second being the cache key, constructs and returns a cache key as if
+      # arid_cache_key was called on the record.
+      #
+      # In this way, the following two calls are identical:
+      #   Artist.arid_cache_key(14, :the_key) == Artist.find(14).arid_cache_key(:the_key)
+      #
+      # When calling in this way, the :auto_expire option is ignored, because you need
+      # the record instance to get the value of updated_at.
+      #
+      # == Example
+      #   User.arid_cache_key(1, 'companies') => 'arid-cache-users/1-companies'
+      def arid_cache_key(*args)
+        options = args.last.is_a?(Hash) ? args.pop : {} # args.extract_options! is not removing the options from the array
+        key_base =
+          if self.is_a?(Class)
+            id, key = args.size == 2 ? args : [nil, args.first]
+            if id.present?
+              AridCache::Inflector.pluralize(self.name.downcase) + '/' + id.to_s + '-' + key.to_s
+            else
+              self.name.downcase + '-' + key.to_s
+            end
+          elsif options[:auto_expire]
+            self.cache_key + '-' + args.first.to_s
+          else
+            id, key = (self.respond_to?(:[]) ? self[:id] : nil), args.first
+            if id.present?
+              AridCache::Inflector.pluralize(self.class.name.downcase) + '/' + id.to_s + '-' + key.to_s
+            else
+              AridCache::Inflector.pluralize(self.class.name.downcase) + '-' + key.to_s
+            end
+          end
+        'arid-cache-' + key_base
       end
 
       def respond_to?(method, include_private = false) #:nodoc:
