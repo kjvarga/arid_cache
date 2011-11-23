@@ -1,7 +1,7 @@
 PATH
   remote: ./
   specs:
-    arid_cache (1.4.7)
+    arid_cache (1.4.8)
       will_paginate
 
 GEM

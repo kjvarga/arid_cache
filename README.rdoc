@@ -1,6 +1,6 @@
 = AridCache
 
-AridCache now supports Rails 3!
+AridCache supports Rails 3!
 
 AridCache is a caching framework written in Ruby which makes caching easy and effective.  AridCache supports Rails 2 and 3 and provides caching on any ActiveRecord class or instance method right out of the box.  AridCache keeps caching logic in your cache configuration rather than dispersed throughout your code, and makes your code easy to manage by making cached calls explicit.
 
@@ -10,6 +10,7 @@ AridCache simplifies caching by supporting auto-expiring cache keys - as well as
 
 == Changes
 
+* v1.4.8: Add :pass_options option which causes all options to be passed into the method call
 * v1.4.7: Support generating cache keys by manually specifying the id, so the record does not need to be loaded.
 * v1.4.6: Tested with will_paginate prerelease and official 3.0 releases
 * v1.4.5: Return empty array if offset is greater than the array size.  Raise exception if you try to apply limit or offset to a Hash.
