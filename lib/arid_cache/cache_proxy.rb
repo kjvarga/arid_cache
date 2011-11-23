@@ -71,6 +71,9 @@ module AridCache
       @options = Options.new(@blueprint.nil? ? opts : @blueprint.opts.merge(opts))
       @options[:receiver_klass] = Utilities.object_class(receiver)
       @cache_key = @receiver.arid_cache_key(@method, @options.opts_for_cache_key)
+      if @options[:pass_options] && block_given?
+        raise ArgumentError.new("You must define a method on your object when :pass_options is true.  Blocks cannot be evaluated in context and with arguments, so we cannot use them.")
+      end
     end
 
     #
@@ -113,7 +116,11 @@ module AridCache
       # to the user.
       def seed_cache
         block = @block || (@blueprint && @blueprint.proc)
-        block_result = block.nil? ? @receiver.instance_eval(@method) : @receiver.instance_eval(&block)
+        block_result = if @options[:pass_options]
+            @receiver.send(@method, @options)
+          else
+            block.nil? ? @receiver.instance_eval(@method) : @receiver.instance_eval(&block)
+          end
         @result = ResultProcessor.new(block_result, @options)
         write_cache(@result.to_cache)
         @result

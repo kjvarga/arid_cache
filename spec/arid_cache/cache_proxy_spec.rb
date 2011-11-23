@@ -322,6 +322,51 @@ describe AridCache::CacheProxy do
     end
   end
 
+  describe "pass_options" do
+    it "should force you to have a method defined" do
+      lambda {
+        User.class_caches do
+          monkeys(:pass_options => true) { |opts| }
+        end
+      }.should raise_error(ArgumentError, /You must define a method on your object/)
+    end
+
+    it "should pass options to the method" do
+      class User
+        def self.monkeys(opts)
+          opts
+        end
+      end
+      User.cached_monkeys(:pass_options => true, :any_opt => true).should include(:pass_options => true, :any_opt => true)
+    end
+
+    it "should pass options from cache definitions" do
+      User.make
+      class User
+        class_caches do
+          monkeys(:pass_options => true, :include => [:companies])
+        end
+
+        def self.monkeys(opts={})
+          User.find(:first, :include => opts[:include])
+        end
+      end
+
+      lambda { User.monkeys }.should query(1) # no default include when calling manually
+      lambda { User.cached_monkeys }.should query(2)
+      lambda { User.cached_monkeys(:include => nil, :force => true) }.should query(1)
+    end
+
+    it "should not allow calling with a block" do
+      class User
+        def self.monkeys(opts)
+          opts
+        end
+      end
+      lambda { User.cached_monkeys(:pass_options => true) { |opts| } }.should raise_error(ArgumentError, /You must define a method on your object/)
+    end
+  end
+
   # describe "reserved names" do
   #   before :each do
   #     @obj = Class.new do

@@ -57,6 +57,9 @@ module AridCache
 
       def method_missing(key, *args, &block)
         opts = global_opts.merge(args.empty? ? {} : args.first)
+        if opts[:pass_options] && block_given?
+          raise ArgumentError.new("You must define a method on your object when :pass_options is true.  Blocks cannot be evaluated in context and with arguments, so we cannot use them.")
+        end
         case self
         when InstanceCacheConfiguration
           AridCache.store.add_instance_cache_configuration(klass, key, opts, block)
