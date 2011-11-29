@@ -117,8 +117,20 @@ module AridCache
     def initialize
     end
 
-    def class_store_key(klass, key);    klass.name.downcase + '-' + key.to_s; end
-    def instance_store_key(klass, key); AridCache::Inflector.pluralize(klass.name.downcase) + '-' + key.to_s; end
+    def class_store_key(klass, key)
+      if klass.name
+        klass.name.downcase
+      else
+        'anonymous_class'
+      end + '-' + key.to_s
+    end
+    def instance_store_key(klass, key)
+      if klass.name
+        AridCache::Inflector.pluralize(klass.name).downcase
+      else
+        'anonymous_instance'
+      end + '-' + key.to_s
+    end
     def object_store_key(object, key)
       case object; when Class; class_store_key(object, key); else; instance_store_key(object.class, key); end
     end

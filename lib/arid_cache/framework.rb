@@ -6,6 +6,11 @@ module AridCache
       defined?(::ActiveRecord) && (major.nil? || (major && ::ActiveRecord::VERSION::MAJOR == major))
     end
 
+    # Return true if the version of AR is >= 3.1
+    def active_record31?
+      defined?(::ActiveRecord) && ((::ActiveRecord::VERSION::MAJOR == 3 && ::ActiveRecord::VERSION::MINOR >= 1) || (::ActiveRecord::VERSION::MAJOR > 3))
+    end
+
     # Include framework hooks for Rails
     #
     # This method is called by <tt>init.rb</tt>, which is run by Rails on startup.

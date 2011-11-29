@@ -22,14 +22,14 @@ module AridCache
         elsif object.respond_to?($1)
           define(object, $1, opts, :fetch_count, key)
         else
-          raise ArgumentError.new("#{object} doesn't respond to #{key} or #{$1}!  Cannot dynamically create query to get the count, please call with a block.")
+          raise ArgumentError.new("#{object} doesn't respond to #{key.inspect} or #{$1.inspect}.  Cannot dynamically create query to get the count, please call with a block.")
         end
       elsif AridCache.store.has?(object, key)
         method_for_cached(object, key, :fetch)
       elsif object.respond_to?(key)
         define(object, key, opts, &block)
       else
-        raise ArgumentError.new("#{object} doesn't respond to #{key}!  Cannot dynamically create query, please call with a block.")
+        raise ArgumentError.new("#{object} doesn't respond to #{key.inspect}!  Cannot dynamically create query, please call with a block.")
       end
       object.send("cached_#{key}", opts)
     end

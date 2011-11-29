@@ -166,6 +166,9 @@ describe AridCache::CacheProxy do
         instance_caches do
           empty { nil }
         end
+        def self.name
+          'SomeClassName'
+        end
       end.new
       @obj.cached_empty(:clear => true)
     end
@@ -203,6 +206,9 @@ describe AridCache::CacheProxy do
         include AridCache
         def result
           @result ||= (1..5).to_a
+        end
+        def self.name
+          "SomeClassName"
         end
       end.new
     end

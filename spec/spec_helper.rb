@@ -43,4 +43,9 @@ RSpec.configure do |config|
     full_example_description = "#{self.class.description} #{@method_name}"
     RAILS_DEFAULT_LOGGER.info("\n\n#{full_example_description}\n#{'-' * (full_example_description.length)}")
   end
+  
+  # Pass :focus option to +describe+ or +it+ to run that spec only
+  config.treat_symbols_as_metadata_keys_with_true_values = true
+  config.filter_run :focus => true
+  config.run_all_when_everything_filtered = true
 end
