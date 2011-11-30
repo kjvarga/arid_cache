@@ -31,11 +31,6 @@ module AridCache
         end
       end
 
-      # Return the object's class or the object if it is a class.
-      def object_class(object)
-        object.is_a?(Class) ? object : object.class
-      end
-
       # Find and return records of the given +klass+ which have id in +ids+.
       # +find_opts+ is a hash of options which are passed to find.
       # If no order option is given, the ordering of the ids is preserved.

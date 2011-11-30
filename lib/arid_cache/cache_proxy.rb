@@ -19,7 +19,7 @@ module AridCache
       end
 
       def klass=(value)
-        self['klass'] = value.is_a?(Class) ? value.name : value.class.name
+        self['klass'] = AridCache.class_name(value)
       end
 
       def klass
@@ -42,12 +42,12 @@ module AridCache
     end
 
     def self.clear_class_caches(object)
-      key = (Utilities.object_class(object)).name.downcase + '-'
+      key = AridCache.class_name(object, :downcase) + '-'
       Rails.cache.delete_matched(%r[arid-cache-#{key}.*])
     end
 
     def self.clear_instance_caches(object)
-      key = AridCache::Inflector.pluralize((Utilities.object_class(object)).name).downcase
+      key = AridCache.class_name(object, :downcase, :pluralize)
       Rails.cache.delete_matched(%r[arid-cache-#{key}.*])
     end
 
@@ -69,7 +69,7 @@ module AridCache
       # Combine the options from the blueprint with the options for this call
       opts = opts.symbolize_keys
       @options = Options.new(@blueprint.nil? ? opts : @blueprint.opts.merge(opts))
-      @options[:receiver_klass] = Utilities.object_class(receiver)
+      @options[:receiver_klass] = receiver.is_a?(Class) ? receiver : receiver.class
       @cache_key = @receiver.arid_cache_key(@method, @options.opts_for_cache_key)
       if @options[:pass_options] && block_given?
         raise ArgumentError.new("You must define a method on your object when :pass_options is true.  Blocks cannot be evaluated in context and with arguments, so we cannot use them.")

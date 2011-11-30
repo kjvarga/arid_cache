@@ -15,7 +15,7 @@ module AridCache
       end
 
       def klass=(object) # store the class name only
-        self['klass'] = object.is_a?(Class) ? object.name : object.class.name
+        self['klass'] = AridCache.class_name(object)
       end
 
       def klass
@@ -118,18 +118,10 @@ module AridCache
     end
 
     def class_store_key(klass, key)
-      if klass.name
-        klass.name.downcase
-      else
-        'anonymous_class'
-      end + '-' + key.to_s
+      AridCache.class_name(klass, :downcase) + '-' + key.to_s
     end
     def instance_store_key(klass, key)
-      if klass.name
-        AridCache::Inflector.pluralize(klass.name).downcase
-      else
-        'anonymous_instance'
-      end + '-' + key.to_s
+      AridCache.class_name(klass, :downcase, :pluralize) + '-' + key.to_s
     end
     def object_store_key(object, key)
       case object; when Class; class_store_key(object, key); else; instance_store_key(object.class, key); end

@@ -64,8 +64,8 @@ describe AridCache::CacheProxy do
     describe "deprecated" do
       before :each do
         AridCache.raw_with_options = false
-      end                                 
-      
+      end
+
       it "should use the deprecated handling" do
         AridCache.raw_with_options.should be_false
       end
@@ -166,9 +166,6 @@ describe AridCache::CacheProxy do
         instance_caches do
           empty { nil }
         end
-        def self.name
-          'SomeClassName'
-        end
       end.new
       @obj.cached_empty(:clear => true)
     end
@@ -206,9 +203,6 @@ describe AridCache::CacheProxy do
         include AridCache
         def result
           @result ||= (1..5).to_a
-        end
-        def self.name
-          "SomeClassName"
         end
       end.new
     end
@@ -372,23 +366,4 @@ describe AridCache::CacheProxy do
       lambda { User.cached_monkeys(:pass_options => true) { |opts| } }.should raise_error(ArgumentError, /You must define a method on your object/)
     end
   end
-
-  # describe "reserved names" do
-  #   before :each do
-  #     @obj = Class.new do
-  #       include AridCache
-  #       instance_caches do
-  #         debugger
-  #         test(:expires_in => 1)
-  #       end
-  #       def test
-  #         true
-  #       end
-  #     end.new
-  #   end
-  #
-  #   it "should support a cache named test" do
-  #     @obj.cached_test
-  #   end
-  # end
 end

@@ -67,6 +67,30 @@ module AridCache
       result
     end
 
+    # Return the object's class name.
+    #
+    # == Arguments
+    # * +object+ - an instance or class.  If it's an anonymous class, the name is nil
+    #   so we return 'anonymous_class' and 'anonymous_instance'.
+    # * +modifiers+ - one or more symbols indicating the order and type of modification
+    #   to perform on the result.  Choose from: :downcase (return lowercase name),
+    #   :pluralize (pluralize the name)
+    def class_name(object, *modifiers)
+      name = object.is_a?(Class) ? object.name : object.class.name
+      name = 'AnonymousClass' if name.nil?
+      while modifier = modifiers.shift
+        case modifier
+        when :downcase
+          name = name.downcase
+        when :pluralize
+          name = AridCache::Inflector.pluralize(name)
+        else
+          raise ArgumentError.new("Unsupported modifier #{modifier.inspect}")
+        end
+      end
+      name
+    end
+
     private
 
     # Dynamically define a method on the object's class to return cached results

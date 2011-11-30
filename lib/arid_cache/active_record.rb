@@ -48,19 +48,15 @@ module AridCache
           if self.is_a?(Class)
             id, key = args.size == 2 ? args : [nil, args.first]
             if id.present?
-              AridCache::Inflector.pluralize(self.name.downcase) + '/' + id.to_s + '-' + key.to_s
+              AridCache.class_name(self, :downcase, :pluralize) + '/' + id.to_s + '-' + key.to_s
             else
-              self.name.downcase + '-' + key.to_s
+              AridCache.class_name(self, :downcase) + '-' + key.to_s
             end
           elsif options[:auto_expire]
             self.cache_key + '-' + args.first.to_s
           else
             id, key = (self.respond_to?(:[]) ? self[:id] : nil), args.first
-            if id.present?
-              AridCache::Inflector.pluralize(self.class.name.downcase) + '/' + id.to_s + '-' + key.to_s
-            else
-              AridCache::Inflector.pluralize(self.class.name.downcase) + '-' + key.to_s
-            end
+            AridCache.class_name(self, :downcase, :pluralize) + (id.present? ? '/' + id.to_s : '') + '-' + key.to_s
           end
         'arid-cache-' + key_base
       end
