@@ -1,3 +1,5 @@
+# If you see lots of "warning: already initialized constant" warnings from Rake or other
+# issues running 'rake spec' or 'rake test', prefix your call with 'bundle exec'.
 require 'bundler/setup'
 Bundler.require(:default, :development)
 

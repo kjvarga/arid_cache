@@ -3,6 +3,7 @@ source "http://rubygems.org"
 
 gem 'activerecord', '>=3', :require => 'active_record'
 gem 'activesupport', '>=3', :require => 'active_support'
+gem 'rake'
 gem "will_paginate", ">=3.0.1"
 
 group :test, :development do
@@ -13,9 +14,6 @@ group :test, :development do
   gem 'ruby-debug19'
   gem 'ruby-debug-base19'
   gem 'sqlite3-ruby'
-  # gem 'test-unit'
-  # gem 'i18n', :require => 'I18n' # required by Faker
-  # Required by the ActiveSupport::Cache::FileStore.
   # Used but not loaded by active_support/cache/file_store.rb
   gem 'rack'
 
