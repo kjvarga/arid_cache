@@ -4,8 +4,8 @@ require 'active_record'
 
 root_path = File.expand_path(File.join(File.dirname(__FILE__), '../../'))
 RAILS_DEFAULT_LOGGER = ENV["STDOUT"] ? Logger.new(STDOUT) : Logger.new(File.join(root_path, '/test/log/test.log'))
-FileUtils.mkdir_p(File.join(root_path, '/tmp/cache'))
-RAILS_CACHE = ActiveSupport::Cache.lookup_store(:file_store, File.join(root_path, '/tmp/cache'))
+FileUtils.mkdir_p(File.join(root_path, 'tmp/cache'))
+RAILS_CACHE = ActiveSupport::Cache.lookup_store(:file_store, File.join(root_path, 'tmp/cache'))
 
 # Mock Rails
 Rails = Class.new do

@@ -81,15 +81,16 @@ module ActiveRecordQueryMatchers
 
   unless defined?(IGNORED_SQL)
     # From active_record/test/cases/helper.rb :
-    ActiveRecord::Base.connection.class.class_eval do
+    ActiveRecord::Base.connection.class_eval do
       IGNORED_SQL = [/^PRAGMA/, /^SELECT currval/, /^SELECT CAST/, /^SELECT @@IDENTITY/, /^SELECT @@ROWCOUNT/, /^SAVEPOINT/, /^ROLLBACK TO SAVEPOINT/, /^RELEASE SAVEPOINT/, /SHOW FIELDS/]
-      def execute_with_query_record(sql, name = nil, &block)
+      def exec_query_with_counting(sql, *args, &block)
         if ArQuery.recording_queries?
           ArQuery.executed << sql unless IGNORED_SQL.any? { |ignore| sql =~ ignore }
         end
-        execute_without_query_record(sql, name, &block)
+        exec_query_without_counting(sql, *args, &block)
       end
-      alias_method_chain :execute, :query_record
+      alias_method :exec_query_without_counting, :exec_query
+      alias_method :exec_query, :exec_query_with_counting
     end
   end
 
