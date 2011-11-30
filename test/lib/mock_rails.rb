@@ -34,3 +34,19 @@ Rails.cache.logger = Rails.logger
 
 # Include this last otherwise the logger isn't set properly
 require 'db_prepare'
+
+# Make time objects compare equally when they differ only on nanoseconds/microseconds.
+# The times loaded from the db don't include the microseconds.
+class Time
+  def nsec
+    0
+  end
+
+  def subsec
+    0
+  end
+
+  def usec
+    0
+  end
+end
