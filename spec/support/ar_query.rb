@@ -80,10 +80,9 @@ module ActiveRecordQueryMatchers
   end
 
   unless defined?(IGNORED_SQL)
-    # From active_record/test/cases/helper.rb :
-    method = ActiveRecord::VERSION::STRING.to_f >= 3.1 ? :exec_query : :execute
-    ActiveRecord::Base.connection.class.class_eval do
+    class << ActiveRecord::Base.connection
       IGNORED_SQL = [/^PRAGMA/, /^SELECT currval/, /^SELECT CAST/, /^SELECT @@IDENTITY/, /^SELECT @@ROWCOUNT/, /^SAVEPOINT/, /^ROLLBACK TO SAVEPOINT/, /^RELEASE SAVEPOINT/, /SHOW FIELDS/]
+      method = ActiveRecord::VERSION::STRING.to_f >= 3.1 ? :exec_query : :execute
       define_method(:"#{method}_with_counting") do |sql, *args, &block|
         if ArQuery.recording_queries?
           ArQuery.executed << sql unless IGNORED_SQL.any? { |ignore| sql =~ ignore }
