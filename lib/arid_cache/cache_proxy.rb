@@ -70,6 +70,7 @@ module AridCache
       opts = opts.symbolize_keys
       @options = Options.new(@blueprint.nil? ? opts : @blueprint.opts.merge(opts))
       @options[:receiver_klass] = receiver.is_a?(Class) ? receiver : receiver.class
+      @options[:receiver_is_a_class] = receiver.is_a?(Class)
       @cache_key = @receiver.arid_cache_key(@method, @options.opts_for_cache_key)
       if @options[:pass_options] && block_given?
         raise ArgumentError.new("You must define a method on your object when :pass_options is true.  Blocks cannot be evaluated in context and with arguments, so we cannot use them.")

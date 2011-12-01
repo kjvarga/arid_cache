@@ -27,8 +27,8 @@ describe AridCache::ActiveRecord do
     end
 
     it "should generate auto-expiring cache key" do
-      updated_at = @user.updated_at.utc.to_s(:number)
-      @user.arid_cache_key('companies', :auto_expire => true).should == "arid-cache-users/#{@user.id}-#{updated_at}-companies"
+      mock(@user).cache_key { 'users/1-123' }
+      @user.arid_cache_key('companies', :auto_expire => true).should == "arid-cache-users/1-123-companies"
     end
 
     it "should generate cache key given an id" do

@@ -1,6 +1,8 @@
 require "spec_helper"
 
 describe AridCache::CacheProxy::Utilities do
+  let(:utils) { AridCache::CacheProxy::Utilities }
+  
   describe 'order_by' do
     it "id column should be prefixed by the table name" do
       stub(::ActiveRecord::Base).is_mysql_adapter? { true }
@@ -22,12 +24,12 @@ describe AridCache::CacheProxy::Utilities do
     end
 
     it "should maintain order" do
-      @result = AridCache::CacheProxy::Utilities.find_all_by_id(Company, @user.companies.reverse.map(&:id))
+      @result = utils.find_all_by_id(Company, @user.companies.reverse.map(&:id))
       @result.should == @user.companies.reverse
     end
 
     it "should apply options" do
-      @result = AridCache::CacheProxy::Utilities.find_all_by_id(Company, @user.companies.reverse.map(&:id),
+      @result = utils.find_all_by_id(Company, @user.companies.reverse.map(&:id),
         :limit => 1,
         :offset => 1
       )
@@ -37,8 +39,14 @@ describe AridCache::CacheProxy::Utilities do
     
     it "should not fail when ids is empty" do
       lambda {
-        AridCache::CacheProxy::Utilities.find_all_by_id(Company, []).inspect  
+        utils.find_all_by_id(Company, []).inspect  
       }.should query(0)
+    end
+  end
+  
+  describe "collection_klass" do
+    it "should return the association class name for a collection proxy" do
+      utils.collection_klass(User.make.companies).should == Company
     end
   end
 end

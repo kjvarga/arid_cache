@@ -156,14 +156,28 @@ describe AridCache::CacheProxy::ResultProcessor do
       @user = User.make
     end
 
-    it "should be recognized" do
-      @result = new_result(@user.companies)
-      @result.is_activerecord_reflection?.should be_true
+    it "should recognize associations" do
+      lambda {
+        @result = new_result(@user.companies)
+        @result.is_activerecord_reflection?.should be_true
+      }.should query(0)
+
+      lambda {
+        @result = new_result(@user.companies, :receiver_is_a_class => false)
+        @result.is_activerecord_reflection?.should be_true
+      }.should query(0)
     end
 
-    it "should recognize named scope" do
-      @result = new_result(User.companies)
-      @result.is_activerecord_reflection?.should be_true
+    it "should recognize named scopes" do
+      lambda {
+        @result = new_result(User.companies)
+        @result.is_activerecord_reflection?.should be_true
+      }.should query(1)
+
+      lambda {
+        @result = new_result(User.companies, :receiver_is_a_class => true)
+        @result.is_activerecord_reflection?.should be_true
+      }.should query(0)
     end
   end
 
@@ -551,15 +565,10 @@ describe AridCache::CacheProxy::ResultProcessor do
     end
   end
 
-  describe "cached proxy_options result" do
+  describe "cached array" do
     before :each do
       @user = User.make
       @obj = Array.new([@user])
-      @obj.class_eval do
-        def respond_to?(method)
-          return true if method == :proxy_options
-        end
-      end
     end
 
     it "should store a CachedResult" do
@@ -567,12 +576,12 @@ describe AridCache::CacheProxy::ResultProcessor do
     end
 
     it "should be a reflection" do
-      new_result(@obj).is_activerecord_reflection?.should be_true
+      new_result(@obj).is_activerecord_reflection?.should be_false
     end
 
     it "should not be able to infer the result klass" do
       cache = new_result(@obj).to_cache
-      cache.klass.should be(NilClass)
+      cache.klass.should be(User)
     end
   end
 
@@ -604,13 +613,8 @@ describe AridCache::CacheProxy::ResultProcessor do
 
     describe "cached empty reflection-like result" do
       before :each do
-        @user = User.make
         @obj = Array.new([])
-        @obj.class_eval do
-          def respond_to?(method)
-            return true if method == :proxy_options
-          end
-        end
+        stub(@obj).proxy_reflection { stub(Object.new).klass { nil } }
       end
 
       it "should store a CachedResult" do

@@ -46,8 +46,31 @@ module AridCache
         AridCache.framework.active_record? && is_enumerable? && @result.first.is_a?(::ActiveRecord::Base)
       end
 
+      # In Rails 2.3 scopes (e.g. User.companies) are loaded if you call anything but
+      # respond_to? on them.  Associations (e.g. User.first.companies) are loaded if
+      # you call anything but class on them.  So it's almost impossible to detect without
+      # loading.
       def is_activerecord_reflection?
-        AridCache.framework.active_record? && (@result.respond_to?(:proxy_reflection) || @result.respond_to?(:proxy_options) || (AridCache.framework.active_record?(3) && @result.is_a?(::ActiveRecord::Relation)))
+        result_is_a = lambda do |*types|
+          !!types.find do |type|
+            case type
+            when :scope
+              defined?(::ActiveRecord::NamedScope::Scope) && @result.class == ::ActiveRecord::NamedScope::Scope # is_a? doesn't work
+            when :relation
+              defined?(::ActiveRecord::Relation) && @result.is_a?(::ActiveRecord::Relation)
+            when :association
+              @result.respond_to?(:proxy_reflection) || @result.respond_to?(:proxy_association)
+            end
+          end
+        end
+
+        if !AridCache.framework.active_record?
+          false
+        elsif options[:receiver_is_a_class]
+          result_is_a.call(:scope, :association, :relation)
+        else
+          result_is_a.call(:association, :scope, :relation)
+        end
       end
 
       def is_cached_result?

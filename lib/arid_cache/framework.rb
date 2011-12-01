@@ -8,7 +8,7 @@ module AridCache
 
     # Return true if the version of AR is >= 3.1
     def active_record31?
-      defined?(::ActiveRecord) && ((::ActiveRecord::VERSION::MAJOR == 3 && ::ActiveRecord::VERSION::MINOR >= 1) || (::ActiveRecord::VERSION::MAJOR > 3))
+      defined?(::ActiveRecord) && ::ActiveRecord::VERSION::STRING.to_f >= 3.1
     end
 
     # Include framework hooks for Rails

@@ -65,7 +65,9 @@ module AridCache
       #
       # Return the class or nil if no class can be inferred.
       def collection_klass(collection)
-        if collection.respond_to?(:proxy_reflection)
+        if collection.respond_to?(:proxy_association)
+          collection.proxy_association.klass
+        elsif collection.respond_to?(:proxy_reflection)
           collection.proxy_reflection.klass
         elsif defined?(::ActiveRecord::Relation) && collection.is_a?(::ActiveRecord::Relation)
           collection.klass

@@ -17,7 +17,7 @@ Rails = Class.new do
     return RAILS_DEFAULT_LOGGER
   end
   def self.rails3?
-    ActiveRecord::VERSION::STRING.to_i >= 3
+    ActiveRecord::VERSION::MAJOR >= 3
   rescue
     false
   end
