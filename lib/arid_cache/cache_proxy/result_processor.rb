@@ -280,7 +280,7 @@ module AridCache
         find_opts = @options.opts_for_find(ids)
         if order_in_database?
           if @options.paginate?
-            if AridCache.framework.active_record?(3)
+            if AridCache.framework.active_record?(:>=, 3)
               page_opts = @options.opts_for_paginate(ids)
               WillPaginate::Collection.create(page_opts[:page], page_opts[:per_page], page_opts[:total_entries]) do |pager|
                 result = AridCache.find_all_by_id(result_klass, ids, find_opts.merge(:limit => pager.per_page, :offset => pager.offset))

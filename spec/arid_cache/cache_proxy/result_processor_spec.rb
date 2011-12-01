@@ -169,10 +169,11 @@ describe AridCache::CacheProxy::ResultProcessor do
     end
 
     it "should recognize named scopes" do
+      # ActiveRecord 2 will trigger a query unless it is passed the receiver_is_a_class option
       lambda {
         @result = new_result(User.companies)
         @result.is_activerecord_reflection?.should be_true
-      }.should query(1)
+      }.should query(AridCache.framework.active_record?(:>=, 3) ? 0 : 1)
 
       lambda {
         @result = new_result(User.companies, :receiver_is_a_class => true)

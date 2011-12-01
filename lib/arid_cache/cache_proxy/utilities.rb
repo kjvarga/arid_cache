@@ -38,7 +38,7 @@ module AridCache
       def find_all_by_id(klass, ids, find_opts={})
         return ids if ids.empty?
         find_opts = Options.new(find_opts.merge(:result_klass => klass)).opts_for_find(ids)
-        if AridCache.framework.active_record?(3)
+        if AridCache.framework.active_record?(:>=, 3) # use Arel
           option_map = {
             :conditions => :where,
             :include => :includes
