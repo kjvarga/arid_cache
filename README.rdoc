@@ -10,6 +10,7 @@ AridCache simplifies caching by supporting auto-expiring cache keys - as well as
 
 == Changes
 
+* v1.5.0: Full Rails 3.1 support
 * v1.4.8: Add :pass_options option which causes all options to be passed into the method call
 * v1.4.7: Support generating cache keys by manually specifying the id, so the record does not need to be loaded.
 * v1.4.6: Tested with will_paginate prerelease and official 3.0 releases

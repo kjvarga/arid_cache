@@ -38,10 +38,8 @@ task :release => :build do
     puts "You must be on the master branch to release!"
     exit!
   end
-  sh "git commit --allow-empty -a -m 'Release #{version}'"
   sh "git tag v#{version}"
   sh "git push origin master --tags"
-  #sh "git push origin v#{version}" # don't release gem
 end
 
 desc "Build #{gem_file} into the pkg/ directory"
