@@ -50,6 +50,15 @@ describe AridCache do
         Company.cached_ordered_by_name(:limit => 1, :order => 'name DESC').inspect
       }.should query("SELECT  \"companies\".* FROM \"companies\"  WHERE (\"companies\".id in (#{@company1.id},#{@company2.id})) ORDER BY name DESC LIMIT 1")
     end
+
+    it "should order in memory when enabled" do
+      Company.cached_ordered_by_name
+      with_order_in_memory do
+        lambda {
+          Company.cached_ordered_by_name(:limit => 1).inspect
+        }.should query("SELECT  \"companies\".* FROM \"companies\"  WHERE (\"companies\".id in (#{@company1.id}))")
+      end
+    end
   end
 
   it "should set the special raw flag" do

@@ -30,6 +30,8 @@ Dir[File.join(root_path, "spec/support/**/*.rb")].each {|f| require f}
 
 RSpec.configure do |config|
   include ActiveRecordQueryMatchers
+  include CustomMethods
+  
   config.mock_with :rr
 
   config.before(:all) do

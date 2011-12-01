@@ -709,4 +709,31 @@ describe AridCache::CacheProxy::ResultProcessor do
       @result.order_in_database?.should be_false
     end
   end
+
+  describe "fetch_activerecords" do
+    it "should maintain the order of the original ids" do
+      records = [Company.make, Company.make, Company.make]
+      cached = new_result(records).to_cache
+      cached.ids.should == records.collect(&:id)
+
+      with_order_in_memory(true) do
+        mock(AridCache).find_all_by_id(Company, cached.ids, Hash.new) { records.reverse }
+        new_result(cached).to_result.should == records
+      end
+      with_order_in_memory(false) do
+        proxy(AridCache).find_all_by_id(Company, cached.ids, { :order => AridCache.order_by(cached.ids, Company) })
+        new_result(cached).to_result.should == records
+      end
+    end
+
+    it "should limit the ids *before* selecting from the database when no order option" do
+      records = [Company.make, Company.make, Company.make]
+      cached = new_result(records).to_cache
+
+      with_order_in_memory(true) do
+        mock(AridCache).find_all_by_id(Company, cached.ids[0,2], Hash.new) { records[0,2].reverse }
+        new_result(cached, :limit => 2).to_result.should == records[0,2]
+      end
+    end
+  end
 end

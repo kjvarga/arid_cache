@@ -152,4 +152,31 @@ describe AridCache::CacheProxy::Options do
       new_options(:receiver_klass => User)[:receiver_klass].should be(User)
     end
   end
+
+  describe "opts_for_find" do
+    it "should not include an order option when ordering by proc" do
+      with_order_in_memory(true, false) do
+        new_options(:order => Proc.new {}).opts_for_find([1,2]).should_not include(:order)
+      end
+    end
+
+    it "should include an order option when ordering by SQL" do
+      with_order_in_memory(true, false) do
+        new_options(:order => 'played DESC').opts_for_find([1,2]).should include(:order => 'played DESC')
+      end
+    end
+
+    it "should not include order option when ordering in memory" do
+      with_order_in_memory(true) do
+        new_options.opts_for_find([1,2]).should_not include(:order)
+      end
+    end
+
+    it "should order by id in the database" do
+      mock(AridCache).order_by([1,2], nil) { 'order clause'}
+      with_order_in_memory(false) do
+        new_options.opts_for_find([1,2]).should include(:order => 'order clause')
+      end
+    end
+  end
 end

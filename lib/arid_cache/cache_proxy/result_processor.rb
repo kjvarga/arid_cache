@@ -166,14 +166,16 @@ module AridCache
             end
           if @options.deprecated_raw?
             result
+          elsif result.is_a?(AridCache::CacheProxy::CachedResult)
+            filter_results(result.ids)
           else
-            filter_results(result.is_a?(AridCache::CacheProxy::CachedResult) ? result.ids : result)
+            filter_results(result)
           end
 
         elsif is_cached_result?
-          fetch_activerecords(filter_results(@result.ids))
+          fetch_activerecords(filter_results(@result.ids, false)) # order in db or after
         elsif order_in_database?
-          fetch_activerecords(filter_results(@result))
+          fetch_activerecords(filter_results(@result, false)) # order in db or after
         else
           filter_results(@result)
         end
@@ -230,11 +232,17 @@ module AridCache
       #   :page / :per_page - paginate the result.  If :limit is specified, the array is
       #             limited before paginating; similarly if :offset is specified the array is offset
       #             before paginating.  Pagination only happens if the :page option is passed.
-      def filter_results(records)
+      #
+      # == Arguments
+      # * records - array of records to process.  Could be ids, ActiveRecords or any other
+      #   objects.
+      # * apply_order - boolean, default true.  If true and the collection responds to sort,
+      #   then apply the sort, which is usually by proc or key.  If false, no reordering is done.
+      def filter_results(records, apply_order=true)
         return records if order_in_database?
 
-        # Order in memory
-        if records.respond_to?(:sort)
+        # Order
+        if apply_order && records.respond_to?(:sort)
           if @options.order_by_proc?
             records = records.sort(&@options[:order])
           elsif @options.order_by_key? && is_hashes?
@@ -303,6 +311,18 @@ module AridCache
           # Limits will have already been applied, remove them from the options for find.
           [:offset, :limit].each { |key| find_opts.delete(key) }
           result = AridCache.find_all_by_id(result_klass, ids, find_opts)
+
+          # Order in memory
+          if @options.order_by_proc?
+            result.sort!(&@options[:order])
+          elsif AridCache.order_in_memory?
+            object_map =
+              result.inject({}) do |hash, record|
+                hash[record.id] = record unless record.nil?
+                hash
+              end
+            result = ids.collect { |id| object_map[id] }
+          end
           records.is_a?(::WillPaginate::Collection) ? records.replace(result) : result
         end
       end
