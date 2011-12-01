@@ -548,7 +548,7 @@ describe AridCache::CacheProxy::ResultProcessor do
     end
 
     it "should not order in database" do
-       new_result(AridCache::CacheProxy::CachedResult.new).order_in_database?.should be_true
+       new_result(AridCache::CacheProxy::CachedResult.new).order_in_database?.should be_false
        new_result(AridCache::CacheProxy::CachedResult.new, { :raw => true }).order_in_database?.should be_false
     end
 
@@ -695,6 +695,18 @@ describe AridCache::CacheProxy::ResultProcessor do
         result.should be_a(Array)
         result.should be_empty
       }
+    end
+  end
+
+  describe "order_in_database?" do
+    it "should be false for cached active records unless an order is specified" do
+      cached = new_result([Company.make]).to_cache
+      @result = new_result(cached)
+      @result.order_in_database?.should be_false
+      @result = new_result(cached, :order => 'name DESC')
+      @result.order_in_database?.should be_true
+      @result = new_result(cached, :raw => true)
+      @result.order_in_database?.should be_false
     end
   end
 end

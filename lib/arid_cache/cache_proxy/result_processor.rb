@@ -35,9 +35,15 @@ module AridCache
       end
 
       # Order in the database if an order clause has been specified and we
-      # have a list of ActiveRecords or a CachedResult.
+      # have ActiveRecords or a CachedResult.
+      #
+      # If :raw is true we always order in memory.
       def order_in_database?
-        (is_cached_result? && !@options.raw?) || (@options.order_by_key? && is_activerecord?)
+        if !@options.raw? && (is_cached_result? || is_activerecord?)
+          @options.order_by_key? ? true : false
+        else
+          false
+        end
       end
 
       # Return true if the result is an enumerable and the first item is

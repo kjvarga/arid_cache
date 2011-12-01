@@ -35,6 +35,21 @@ describe AridCache do
         Company.cached_ordered_by_name(:order => 'name DESC').inspect
       }.should query(2)
     end
+
+    it "should apply limit *before* going to the database when the result is cached and no order is specified" do
+      Company.cached_ordered_by_name
+      id = @company1.id
+      lambda {
+        Company.cached_ordered_by_name(:limit => 1).inspect
+      }.should query("SELECT  \"companies\".* FROM \"companies\"  WHERE (\"companies\".id in (#{id})) ORDER BY CASE WHEN \"companies\".id=#{id} THEN 1  END LIMIT 1")
+    end
+
+    it "should apply limit after going to the database when an order is specified" do
+      Company.cached_ordered_by_name
+      lambda {
+        Company.cached_ordered_by_name(:limit => 1, :order => 'name DESC').inspect
+      }.should query("SELECT  \"companies\".* FROM \"companies\"  WHERE (\"companies\".id in (#{@company1.id},#{@company2.id})) ORDER BY name DESC LIMIT 1")
+    end
   end
 
   it "should set the special raw flag" do

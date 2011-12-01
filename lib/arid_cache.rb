@@ -30,6 +30,16 @@ module AridCache
     !!@raw_with_options
   end
 
+  # Set to true to force ordering of results in memory rather than the database,
+  # when possible.
+  def self.order_in_memory=(value)
+    @order_in_memory = value
+  end
+
+  def self.order_in_memory?
+    !!@order_in_memory
+  end
+
   def self.cache
     AridCache::CacheProxy
   end
