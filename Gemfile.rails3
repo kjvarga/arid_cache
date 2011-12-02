@@ -11,8 +11,7 @@ group :test, :development do
   gem 'machinist'
   gem 'rr'
   gem "rspec"
-  gem 'ruby-debug19'
-  gem 'ruby-debug-base19'
+  gem 'ruby-debug19', :require => 'ruby-debug'
   gem 'sqlite3-ruby'
   # Used but not loaded by active_support/cache/file_store.rb
   gem 'rack'

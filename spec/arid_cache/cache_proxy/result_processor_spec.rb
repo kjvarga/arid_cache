@@ -735,5 +735,12 @@ describe AridCache::CacheProxy::ResultProcessor do
         new_result(cached, :limit => 2).to_result.should == records[0,2]
       end
     end
+
+    it "should omit records which cannot be found" do
+      user = User.make
+      cached = new_result([user]).to_cache
+      user.destroy
+      new_result(cached).to_result.should be_empty
+    end
   end
 end

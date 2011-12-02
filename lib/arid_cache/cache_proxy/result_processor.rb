@@ -321,7 +321,13 @@ module AridCache
                 hash[record.id] = record unless record.nil?
                 hash
               end
-            result = ids.collect { |id| object_map[id] }
+            result = 
+              ids.inject([]) do |array, id|
+                if value = object_map[id]
+                  array << value
+                end
+                array
+              end
           end
           records.is_a?(::WillPaginate::Collection) ? records.replace(result) : result
         end

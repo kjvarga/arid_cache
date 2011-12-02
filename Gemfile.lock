@@ -72,7 +72,6 @@ DEPENDENCIES
   rake
   rr
   rspec
-  ruby-debug-base19
   ruby-debug19
   sqlite3-ruby
   will_paginate (>= 3.0.1)
