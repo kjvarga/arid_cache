@@ -10,6 +10,7 @@ AridCache simplifies caching by supporting auto-expiring cache keys - as well as
 
 == Changes
 
+* v1.5.2: In-memory bug fix: omit records which cannot be found
 * v1.5.1: Support in-memory sorting for ActiveRecord sets; Set AridCache.order_in_memory.  Also
   add tentative support for sorting ActiveRecord collections using procs.
 * v1.5.0: Full Rails 3.1 support
